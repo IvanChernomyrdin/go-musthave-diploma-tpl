@@ -23,3 +23,10 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# миграции
+internal/migrations
+
+# mod + sum
+*.mod
+*.sum
