@@ -11,6 +11,8 @@ type GofemartRepo interface {
 	GetUserByLoginAndPassword(login, password string) (*models.User, error)
 	CreateUser(login, password string) (*models.User, error)
 	GetUserByID(id int) (*models.User, error)
+	// создание и проверка заказа
+	CreateOrder(userID int, orderNumber string) error
 }
 
 // GofemartService - сервис с бизнес-логикой
@@ -57,4 +59,17 @@ func (s *GofemartService) GetUserByID(userID int) (*models.User, error) {
 		return nil, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetUserByID(userID)
+}
+
+// CreateOrder - создание нового заказа
+func (s *GofemartService) CreateOrder(userID int, orderNumber string) error {
+	if userID <= 0 {
+		return fmt.Errorf("invalid user ID")
+	}
+
+	if orderNumber == "" {
+		return fmt.Errorf("order number is required")
+	}
+
+	return s.repo.CreateOrder(userID, orderNumber)
 }

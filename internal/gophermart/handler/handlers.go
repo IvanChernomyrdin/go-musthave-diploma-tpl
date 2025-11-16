@@ -2,13 +2,17 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"go-musthave-diploma-tpl/internal/gophermart/middleware"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	service "go-musthave-diploma-tpl/internal/gophermart/service"
 
+	pgk "go-musthave-diploma-tpl/internal/gophermart/pkg"
 	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
 )
 
@@ -136,4 +140,72 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 		"message": "Successfully authenticated with cookie",
 		"user_id": userID,
 	})
+}
+
+func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
+	// нужно реализовать 200, 202, 400, 401, 409, 422, 500
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// пароверили метод text
+	if r.Header.Get("Content-Type") != "text/plain" {
+		http.Error(w, "неверный формат запроса", http.StatusBadRequest) // 400
+		return
+	}
+	// провекрили cookie
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized) // 401
+		return
+	}
+	// читаем тело
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	// убираем пробелы из строки
+	number := strings.TrimSpace(string(body))
+	// строка должан быть не пустая
+	if number == "" {
+		http.Error(w, "Order number is required", http.StatusBadRequest)
+		return
+	}
+	// проверяем что в строке все цифры
+	if !pgk.ContainsOnlyDigits(number) {
+		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity) //422
+		return
+	}
+	// проходим алгоритмом луна
+	if !pgk.ValidateLuhn(number) {
+		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity)
+		return
+	}
+
+	// Преобразуем string в int64
+	userIDint, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+
+	// если всё удачно записываем в бд
+	err = h.svc.CreateOrder(userIDint, number)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrDuplicateOrder):
+			w.WriteHeader(http.StatusOK) //200 если уже был загружен
+			w.Write([]byte(err.Error()))
+		case errors.Is(err, models.ErrOtherUserOrder): //409 если другой пользователь уже загрузил
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(err.Error()))
+		default:
+			http.Error(w, "внутренние ошибки сервера", http.StatusInternalServerError) //500
+		}
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("успешное создание заказа"))
 }
