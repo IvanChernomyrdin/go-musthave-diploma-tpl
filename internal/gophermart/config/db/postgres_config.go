@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -33,7 +32,7 @@ func Init(databaseDSN string) error {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://internal/migrations/gophermart",
+		"file://internal/gophermart/migrations/",
 		"postgres", driver)
 	if err != nil {
 		return fmt.Errorf("ошибка создания миграции для гофемарта: %v", err)
@@ -44,7 +43,6 @@ func Init(databaseDSN string) error {
 		return fmt.Errorf("ошибка применения миграций для гофемарта: %v", err)
 	}
 
-	log.Println("Миграции применены успешно")
 	return nil
 }
 

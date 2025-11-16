@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	config "go-musthave-diploma-tpl/internal/config"
-	db "go-musthave-diploma-tpl/internal/config/db"
-	chiRouter "go-musthave-diploma-tpl/internal/handler"
-	"go-musthave-diploma-tpl/internal/repository/postgres"
-	logger "go-musthave-diploma-tpl/internal/runtime/logger"
-	"go-musthave-diploma-tpl/internal/service"
+	config "go-musthave-diploma-tpl/internal/gophermart/config"
+	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
+	chiRouter "go-musthave-diploma-tpl/internal/gophermart/handler"
+	"go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
+	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
+	"go-musthave-diploma-tpl/internal/gophermart/service"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,14 +23,17 @@ func main() {
 	// бд и миграции
 	if err := db.Init(cfg.DATABASE_URI); err != nil {
 		castomLogger.Fatalf("PostgreSQL недоступна: %v", err)
+	} else {
+		castomLogger.Infof("Миграции применены успешно")
 	}
 	// chi роутер
+	repo := postgres.New()
 	//что должен реализовывать этот сервис
-	svc := service.NewGofemartService(postgres.New())
+	svc := service.NewGofemartService(repo)
 	//инициализируем хандлеры
 	h := chiRouter.NewHandler(svc)
 	//инициализируем роуты
-	r := chiRouter.NewRouter(h)
+	r := chiRouter.NewRouter(h, svc)
 
 	//создаём серве
 	server := &http.Server{
@@ -57,6 +60,8 @@ func main() {
 	if err := server.Shutdown(ctx); err != nil {
 		castomLogger.Fatalf("Принудительное завершение: %v", err)
 	}
-
+	if err := logger.NewHTTPLogger().Close(); err != nil {
+		castomLogger.Fatalf("Логгер не завершил работу: %v", err)
+	}
 	castomLogger.Info("Сервер остановлен")
 }

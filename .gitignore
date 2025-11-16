@@ -24,9 +24,13 @@ vendor/
 .idea
 .vscode
 
-# миграции
-internal/migrations
+# Environment files
+.env
 
+# Logs
+*.log
 # mod + sum
 *.mod
 *.sum
+
+*.log

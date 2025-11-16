@@ -11,12 +11,14 @@ type Config struct {
 	ACCRUAL_SYSTEM_ADDRESS string
 }
 
+const EncryptionKey = "32-bytes-long-key-1234567890777!"
+
 func Load() *Config {
 	cfg := &Config{}
 
-	flag.StringVar(&cfg.RUN_ADDRESS, "a", "localhost:8081", "адрес и порт запуска сервиса")
+	flag.StringVar(&cfg.RUN_ADDRESS, "a", "localhost:8080", "адрес и порт запуска сервиса")
 	flag.StringVar(&cfg.DATABASE_URI, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
-	flag.StringVar(&cfg.ACCRUAL_SYSTEM_ADDRESS, "r", "localhost:8082", "адрес системы расчёта начислений")
+	flag.StringVar(&cfg.ACCRUAL_SYSTEM_ADDRESS, "r", "localhost:8081", "адрес системы расчёта начислений")
 
 	flag.Parse()
 	cfg.applyEnv()
