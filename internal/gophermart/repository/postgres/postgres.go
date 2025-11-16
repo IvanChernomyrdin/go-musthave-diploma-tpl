@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"go-musthave-diploma-tpl/internal/gophermart/config/db"
+	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
 )
@@ -47,7 +47,6 @@ func (ps *PostgresStorage) GetUserByLogin(login string) (*models.User, error) {
 		return nil, nil
 	}
 	if err != nil {
-		castomLogger.Infof("failed to get user by login: %v", err)
 		return nil, fmt.Errorf("failed to get user by login: %w", err)
 	}
 

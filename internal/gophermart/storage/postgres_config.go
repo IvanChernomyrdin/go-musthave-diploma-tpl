@@ -32,7 +32,7 @@ func Init(databaseDSN string) error {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://internal/migrations/",
+		"file://internal/gophermart/migrations/",
 		"postgres", driver)
 	if err != nil {
 		return fmt.Errorf("ошибка создания миграции для гофемарта: %v", err)
