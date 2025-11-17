@@ -125,21 +125,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
-	// Получаем userID из контекста (это делает CookieMiddleware)
-	userID, err := middleware.GetUserID(r.Context())
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Successfully authenticated with cookie",
-		"user_id": userID,
-	})
-}
-
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	// нужно реализовать 200, 202, 400, 401, 409, 422, 500
 	// пароверили метод text

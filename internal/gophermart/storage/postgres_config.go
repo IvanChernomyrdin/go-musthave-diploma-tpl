@@ -3,7 +3,6 @@ package storage
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -14,14 +13,6 @@ import (
 var DB *sql.DB
 
 func Init(databaseDSN string) error {
-	connection := getConnect(databaseDSN)
-
-	var err error
-	DB, err = sql.Open("pgx", connection)
-	if err != nil {
-		return fmt.Errorf("не удалось подключиться к БД: %v", err)
-	}
-
 	if err := DB.Ping(); err != nil {
 		return fmt.Errorf("проверка подключения к БД не удалась: %v", err)
 	}
@@ -44,22 +35,4 @@ func Init(databaseDSN string) error {
 	}
 
 	return nil
-}
-
-func getConnect(connectionFlag string) string {
-	if connectionFlag != "" {
-		return strings.Trim(connectionFlag, `"`)
-	}
-	return "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
-}
-
-func Ping() error {
-	if DB == nil {
-		return fmt.Errorf("база данных не инициализирована")
-	}
-	return DB.Ping()
-}
-
-func GetDB() *sql.DB {
-	return DB
 }

@@ -20,7 +20,7 @@ type PostgresStorage struct {
 
 func New() *PostgresStorage {
 	return &PostgresStorage{
-		db:              db.GetDB(),
+		db:              db.DB,
 		errorClassifier: NewPostgresErrorClassifier(),
 	}
 }

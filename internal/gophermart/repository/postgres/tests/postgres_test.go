@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 
-	postgres "go-musthave-diploma-tpl/internal/repository/postgres"
+	postgres "go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
 )
 
 // Вспомогательная функция для создания PostgresStorage с mock DB

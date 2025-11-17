@@ -50,16 +50,5 @@ func getConnect(connectionFlag string) string {
 	if connectionFlag != "" {
 		return strings.Trim(connectionFlag, `"`)
 	}
-	return "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
-}
-
-func Ping() error {
-	if DB == nil {
-		return fmt.Errorf("база данных не инициализирована")
-	}
-	return DB.Ping()
-}
-
-func GetDB() *sql.DB {
-	return DB
+	return ""
 }

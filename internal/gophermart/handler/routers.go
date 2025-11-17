@@ -23,9 +23,7 @@ func NewRouter(h *Handler, svc *service.GofemartService) http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/user", func(r chi.Router) {
 			// подключаем проверку cookie
-			r.Use(middleware.CookieMiddleware(svc))
-			// проверка cookie
-			r.Get("/test-auth", h.TestAuth)
+			r.Use(middleware.AccessCookieMiddleware(svc))
 
 			r.Route("/orders", func(r chi.Router) {
 				// загрузка пользователем номера заказа для расчёта
