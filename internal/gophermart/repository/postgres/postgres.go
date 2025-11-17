@@ -145,9 +145,6 @@ func NewWithDB(db *sql.DB) *PostgresStorage {
 
 // проверяем на существование заказ, если его нет добавляем
 func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
-	fmt.Printf("=== DEBUG CreateOrder ===\n")
-	fmt.Printf("userID: %d, orderNumber: %s\n", userID, orderNumber)
-
 	query := `
         WITH inserted AS (
             INSERT INTO orders (user_id, number, status) 
@@ -169,29 +166,20 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 	var result string
 	err := ps.db.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
 
-	fmt.Printf("SQL result: %s, error: %v\n", result, err)
-
 	if err != nil {
-		fmt.Printf("Returning error: %v\n", err)
 		return fmt.Errorf("failed to create order: %w", err)
 	}
 
-	fmt.Printf("Final result: %s\n", result)
 	switch result {
 	case "inserted":
-		fmt.Printf("Returning nil (success)\n")
 		return nil
 	case "duplicate":
-		fmt.Printf("Returning ErrDuplicateOrder\n")
 		return models.ErrDuplicateOrder
 	case "conflict":
-		fmt.Printf("Returning ErrOtherUserOrder\n")
 		return models.ErrOtherUserOrder
 	case "not_found":
-		fmt.Printf("Returning error - order not found after conflict\n")
 		return fmt.Errorf("order not found after conflict")
 	default:
-		fmt.Printf("Returning unexpected result: %s\n", result)
 		return fmt.Errorf("unexpected result: %s", result)
 	}
 }

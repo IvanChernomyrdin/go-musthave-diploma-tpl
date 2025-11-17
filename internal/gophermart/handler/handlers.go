@@ -103,8 +103,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := h.svc.LoginUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case "login and password are required":
-			http.Error(w, "Login and password are required", http.StatusBadRequest)
 		case "invalid login or password":
 			http.Error(w, "Invalid login or password", http.StatusUnauthorized) // 401!
 		default:
@@ -144,10 +142,6 @@ func (h *Handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	// нужно реализовать 200, 202, 400, 401, 409, 422, 500
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	// пароверили метод text
 	if r.Header.Get("Content-Type") != "text/plain" {
 		http.Error(w, "неверный формат запроса", http.StatusBadRequest) // 400

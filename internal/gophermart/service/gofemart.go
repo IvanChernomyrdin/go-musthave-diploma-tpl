@@ -38,10 +38,6 @@ func (s *GofemartService) RegisterUser(login, password string) (*models.User, er
 }
 
 func (s *GofemartService) LoginUser(login, password string) (*models.User, error) {
-	if login == "" || password == "" {
-		return nil, fmt.Errorf("login and password are required")
-	}
-
 	user, err := s.repo.GetUserByLoginAndPassword(login, password)
 	if err != nil {
 		return nil, err

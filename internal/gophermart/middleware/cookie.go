@@ -31,11 +31,6 @@ func CookieMiddleware(repo *service.GofemartService) func(http.Handler) http.Han
 				return
 			}
 
-			fmt.Printf("Cookie Expires: %v, IsZero: %v, BeforeNow: %v\n",
-				cookie.Expires,
-				cookie.Expires.IsZero(),
-				cookie.Expires.Before(time.Now()))
-
 			// Проверяем срок жизни куки
 			if !cookie.Expires.IsZero() && cookie.Expires.Before(time.Now()) {
 				http.Error(w, "Cookie expired", http.StatusUnauthorized)
