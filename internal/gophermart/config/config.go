@@ -6,9 +6,9 @@ import (
 )
 
 type Config struct {
-	RUN_ADDRESS            string
-	DATABASE_URI           string
-	ACCRUAL_SYSTEM_ADDRESS string
+	RunAddress           string
+	DatabaseURI          string
+	AccrualSystemAddress string
 }
 
 const EncryptionKey = "32-bytes-long-key-1234567890777!"
@@ -16,9 +16,9 @@ const EncryptionKey = "32-bytes-long-key-1234567890777!"
 func Load() *Config {
 	cfg := &Config{}
 
-	flag.StringVar(&cfg.RUN_ADDRESS, "a", "localhost:8080", "адрес и порт запуска сервиса")
-	flag.StringVar(&cfg.DATABASE_URI, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
-	flag.StringVar(&cfg.ACCRUAL_SYSTEM_ADDRESS, "r", "localhost:8081", "адрес системы расчёта начислений")
+	flag.StringVar(&cfg.RunAddress, "a", "localhost:8080", "адрес и порт запуска сервиса")
+	flag.StringVar(&cfg.DatabaseURI, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
+	flag.StringVar(&cfg.AccrualSystemAddress, "r", "localhost:8081", "адрес системы расчёта начислений")
 
 	flag.Parse()
 	cfg.applyEnv()
@@ -26,13 +26,13 @@ func Load() *Config {
 }
 
 func (cfg *Config) applyEnv() {
-	if envRUN_ADDRESS := os.Getenv("RUN_ADDRESS"); envRUN_ADDRESS != "" {
-		cfg.RUN_ADDRESS = envRUN_ADDRESS
+	if envRunAddress := os.Getenv("RUN_ADDRESS"); envRunAddress != "" {
+		cfg.RunAddress = envRunAddress
 	}
-	if envDATABASE_URI := os.Getenv("DATABASE_URI"); envDATABASE_URI != "" {
-		cfg.DATABASE_URI = envDATABASE_URI
+	if envDatabaseURI := os.Getenv("DATABASE_URI"); envDatabaseURI != "" {
+		cfg.DatabaseURI = envDatabaseURI
 	}
-	if envACCRUAL_SYSTEM_ADDRESS := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envACCRUAL_SYSTEM_ADDRESS != "" {
-		cfg.ACCRUAL_SYSTEM_ADDRESS = envACCRUAL_SYSTEM_ADDRESS
+	if envAccrualSystemAddress := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envAccrualSystemAddress != "" {
+		cfg.AccrualSystemAddress = envAccrualSystemAddress
 	}
 }
