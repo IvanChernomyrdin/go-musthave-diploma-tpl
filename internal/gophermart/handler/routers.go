@@ -29,7 +29,7 @@ func NewRouter(h *Handler, svc *service.GofemartService) http.Handler {
 				// загрузка пользователем номера заказа для расчёта
 				r.Post("/", h.CreateOrder)
 				// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
-				// r.Get("/", h.GetOrders)
+				r.Get("/", h.GetOrders)
 			})
 			r.Route("/balance", func(r chi.Router) {
 				// получение текущего баланса счёта баллов лояльности пользователя

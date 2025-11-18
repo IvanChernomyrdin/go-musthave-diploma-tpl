@@ -183,3 +183,27 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 		return fmt.Errorf("unexpected result: %s", result)
 	}
 }
+
+func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
+	rows, err := ps.db.Query(`
+        SELECT number, status, accrual, uploaded_at 
+        FROM orders WHERE user_id = $1 
+        ORDER BY uploaded_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var order models.Order
+		err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}

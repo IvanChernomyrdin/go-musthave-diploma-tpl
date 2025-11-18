@@ -12,7 +12,6 @@ type Order struct {
 	Status     string    `json:"status" db:"status"`
 	Accrual    float64   `json:"accrual,omitempty" db:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
-	UpdatedAt  time.Time `json:"-" db:"updated_at"`
 }
 
 // статусы заказов

@@ -13,6 +13,8 @@ type GofemartRepo interface {
 	GetUserByID(id int) (*models.User, error)
 	// создание и проверка заказа
 	CreateOrder(userID int, orderNumber string) error
+	// получение заказов по пользвователю
+	GetOrders(userID int) ([]models.Order, error)
 }
 
 // GofemartService - сервис с бизнес-логикой
@@ -68,4 +70,8 @@ func (s *GofemartService) CreateOrder(userID int, orderNumber string) error {
 	}
 
 	return s.repo.CreateOrder(userID, orderNumber)
+}
+
+func (s *GofemartService) GetOrders(userID int) ([]models.Order, error) {
+	return s.repo.GetOrders(userID)
 }

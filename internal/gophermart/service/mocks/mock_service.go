@@ -4,6 +4,8 @@
 // Package mocks is a generated GoMock package.
 package mocks
 
+//mockgen -source=E:\go-musthave-group-diploma-tpl\internal\gophermart\service\gofemart.go -destination=E:\go-musthave-group-diploma-tpl\internal\gophermart\service\mocks\mock_service.go -package=mocks обновить моки
+
 import (
 	models "go-musthave-diploma-tpl/internal/gophermart/models"
 	reflect "reflect"
@@ -61,6 +63,21 @@ func (m *MockGofemartRepo) CreateUser(login, password string) (*models.User, err
 func (mr *MockGofemartRepoMockRecorder) CreateUser(login, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockGofemartRepo)(nil).CreateUser), login, password)
+}
+
+// GetOrders mocks base method.
+func (m *MockGofemartRepo) GetOrders(userID int) ([]models.Order, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrders", userID)
+	ret0, _ := ret[0].([]models.Order)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrders indicates an expected call of GetOrders.
+func (mr *MockGofemartRepoMockRecorder) GetOrders(userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrders", reflect.TypeOf((*MockGofemartRepo)(nil).GetOrders), userID)
 }
 
 // GetUserByID mocks base method.

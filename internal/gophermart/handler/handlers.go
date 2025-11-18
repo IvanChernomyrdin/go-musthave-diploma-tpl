@@ -132,7 +132,7 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "неверный формат запроса", http.StatusBadRequest) // 400
 		return
 	}
-	// провекрили cookie
+	// проверили cookie
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
 		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized) // 401
@@ -181,10 +181,37 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(err.Error()))
 		default:
-			http.Error(w, "внутренние ошибки сервера", http.StatusInternalServerError) //500
+			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError) //500
 		}
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("успешное создание заказа"))
+}
+
+func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
+		return
+	}
+
+	userIDint, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		return
+	}
+	result, err := h.svc.GetOrders(userIDint)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("внутренняя ошибка сервера"))
+	}
+	if len(result) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		w.Write([]byte("нет данных для ответа"))
+	}
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }
