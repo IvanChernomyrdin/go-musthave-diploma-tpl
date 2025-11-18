@@ -205,6 +205,10 @@ func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
 		orders = append(orders, order)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return orders, nil
 }
 
