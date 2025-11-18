@@ -40,6 +40,10 @@ func (s *GofemartService) RegisterUser(login, password string) (*models.User, er
 }
 
 func (s *GofemartService) LoginUser(login, password string) (*models.User, error) {
+	if login == "" || password == "" {
+		return nil, fmt.Errorf("login and password are required")
+	}
+
 	user, err := s.repo.GetUserByLoginAndPassword(login, password)
 	if err != nil {
 		return nil, err
@@ -73,5 +77,8 @@ func (s *GofemartService) CreateOrder(userID int, orderNumber string) error {
 }
 
 func (s *GofemartService) GetOrders(userID int) ([]models.Order, error) {
+	if userID <= 0 {
+		return nil, fmt.Errorf("invalid user ID")
+	}
 	return s.repo.GetOrders(userID)
 }
