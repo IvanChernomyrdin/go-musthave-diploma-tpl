@@ -33,7 +33,7 @@ func NewRouter(h *Handler, svc *service.GofemartService) http.Handler {
 			})
 			r.Route("/balance", func(r chi.Router) {
 				// получение текущего баланса счёта баллов лояльности пользователя
-				// r.Get("/", h.GetBalance)
+				r.Get("/", h.GetBalance)
 				// запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 				// r.Post("/withdraw", h.BalanceWithdraw)
 			})

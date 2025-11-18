@@ -207,3 +207,20 @@ func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
 
 	return orders, nil
 }
+
+func (ps *PostgresStorage) GetBalance(userID int) (models.Balance, error) {
+	var balance models.Balance
+	query := `SELECT
+		(SELECT COALESCE(SUM(accrual), 0) FROM orders WHERE user_id = $1 AND status = 'PROCESSED') as current,
+		(SELECT COALESCE(SUM(sum), 0) FROM withdrawals WHERE user_id = $1) as withdrawn`
+
+	err := ps.db.QueryRow(query, userID).Scan(&balance.Current, &balance.Withdrawn)
+	if err == sql.ErrNoRows {
+		return models.Balance{Current: 0, Withdrawn: 0}, nil
+	}
+	if err != nil {
+		return models.Balance{}, fmt.Errorf("failed to get balance: %w", err)
+	}
+
+	return balance, nil
+}
