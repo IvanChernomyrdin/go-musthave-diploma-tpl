@@ -30,7 +30,5 @@ vendor/
 # Logs
 *.log
 # mod + sum
-*.mod
-*.sum
-
-*.log
+# *.mod
+# *.sum

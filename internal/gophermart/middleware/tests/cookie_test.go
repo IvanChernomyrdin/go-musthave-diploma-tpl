@@ -25,7 +25,7 @@ func TestCookieMiddleware_Success(t *testing.T) {
 		GetUserByID(123).
 		Return(&models.User{ID: 123, Login: "testuser"}, nil)
 
-	middleware := middlewareDir.CookieMiddleware(gofemartService)
+	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := middlewareDir.GetUserID(r.Context())
 		if userID != "123" {
@@ -57,7 +57,7 @@ func TestCookieMiddleware_UserNotFound(t *testing.T) {
 		GetUserByID(999).
 		Return(nil, nil)
 
-	middleware := middlewareDir.CookieMiddleware(gofemartService)
+	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called when user not found")
 	}))
@@ -81,7 +81,7 @@ func TestCookieMiddleware_NoCookie(t *testing.T) {
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
 	gofemartService := service.NewGofemartService(mockRepo)
 
-	middleware := middlewareDir.CookieMiddleware(gofemartService)
+	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called when no cookie")
 	}))
@@ -103,7 +103,7 @@ func TestCookieMiddleware_InvalidEncryption(t *testing.T) {
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
 	gofemartService := service.NewGofemartService(mockRepo)
 
-	middleware := middlewareDir.CookieMiddleware(gofemartService)
+	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called with invalid encryption")
 	}))

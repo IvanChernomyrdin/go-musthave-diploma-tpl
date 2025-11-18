@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	postgresError "go-musthave-diploma-tpl/internal/repository/postgres"
+	postgresError "go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"

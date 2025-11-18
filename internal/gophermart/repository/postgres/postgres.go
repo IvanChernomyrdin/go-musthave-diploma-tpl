@@ -7,7 +7,7 @@ import (
 	"fmt"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
-	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
+	logger "go-musthave-diploma-tpl/internal/runtime/logger"
 )
 
 // кастомный логгер записывает в файл runtime/log
@@ -20,7 +20,7 @@ type PostgresStorage struct {
 
 func New() *PostgresStorage {
 	return &PostgresStorage{
-		db:              db.GetDB(),
+		db:              db.DB,
 		errorClassifier: NewPostgresErrorClassifier(),
 	}
 }
@@ -141,4 +141,90 @@ func NewWithDB(db *sql.DB) *PostgresStorage {
 		db:              db,
 		errorClassifier: NewPostgresErrorClassifier(),
 	}
+}
+
+// проверяем на существование заказ, если его нет добавляем
+func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
+	query := `
+        WITH inserted AS (
+            INSERT INTO orders (user_id, number, status) 
+            VALUES ($1, $2, $3)
+            ON CONFLICT (number) DO NOTHING
+            RETURNING user_id
+        ),
+        existing AS (
+            SELECT user_id FROM orders WHERE number = $2
+        )
+        SELECT 
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM inserted) THEN 'inserted'::text
+                WHEN EXISTS (SELECT 1 FROM existing WHERE user_id = $1) THEN 'duplicate'::text
+                WHEN EXISTS (SELECT 1 FROM existing) THEN 'conflict'::text
+                ELSE 'not_found'::text
+            END as result`
+
+	var result string
+	err := ps.db.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
+
+	if err != nil {
+		return fmt.Errorf("failed to create order: %w", err)
+	}
+
+	switch result {
+	case "inserted":
+		return nil
+	case "duplicate":
+		return models.ErrDuplicateOrder
+	case "conflict":
+		return models.ErrOtherUserOrder
+	case "not_found":
+		return fmt.Errorf("order not found after conflict")
+	default:
+		return fmt.Errorf("unexpected result: %s", result)
+	}
+}
+
+func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
+	rows, err := ps.db.Query(`
+        SELECT number, status, accrual, uploaded_at 
+        FROM orders WHERE user_id = $1 
+        ORDER BY uploaded_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var order models.Order
+		err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (ps *PostgresStorage) GetBalance(userID int) (models.Balance, error) {
+	var balance models.Balance
+	query := `SELECT
+		(SELECT COALESCE(SUM(accrual), 0) FROM orders WHERE user_id = $1 AND status = 'PROCESSED') as current,
+		(SELECT COALESCE(SUM(sum), 0) FROM withdrawals WHERE user_id = $1) as withdrawn`
+
+	err := ps.db.QueryRow(query, userID).Scan(&balance.Current, &balance.Withdrawn)
+	if err == sql.ErrNoRows {
+		return models.Balance{Current: 0, Withdrawn: 0}, nil
+	}
+	if err != nil {
+		return models.Balance{}, fmt.Errorf("failed to get balance: %w", err)
+	}
+
+	return balance, nil
 }

@@ -6,8 +6,8 @@ import (
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	chiRouter "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
-	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
 	"go-musthave-diploma-tpl/internal/gophermart/service"
+	logger "go-musthave-diploma-tpl/internal/runtime/logger"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,7 +21,7 @@ func main() {
 	// логгер
 	castomLogger := logger.NewHTTPLogger().Logger.Sugar()
 	// бд и миграции
-	if err := db.Init(cfg.DATABASE_URI); err != nil {
+	if err := db.Init(cfg.DatabaseURI); err != nil {
 		castomLogger.Fatalf("PostgreSQL недоступна: %v", err)
 	} else {
 		castomLogger.Infof("Миграции применены успешно")
@@ -37,7 +37,7 @@ func main() {
 
 	//создаём серве
 	server := &http.Server{
-		Addr:    cfg.RUN_ADDRESS,
+		Addr:    cfg.RunAddress,
 		Handler: r,
 	}
 	//start server and graceful shutdown
@@ -45,7 +45,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		castomLogger.Infof("Сервер запущен на %s", cfg.RUN_ADDRESS)
+		castomLogger.Infof("Сервер запущен на %s", cfg.RunAddress)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			castomLogger.Fatalf("Ошибка сервера: %v", err)
 		}

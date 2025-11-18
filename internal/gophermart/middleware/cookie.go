@@ -21,7 +21,7 @@ const UserIDKey contextKey = "userID"
 
 var encryptionKey = []byte(config.EncryptionKey)
 
-func CookieMiddleware(repo *service.GofemartService) func(http.Handler) http.Handler {
+func AccessCookieMiddleware(repo *service.GofemartService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Получаем куки
@@ -30,11 +30,6 @@ func CookieMiddleware(repo *service.GofemartService) func(http.Handler) http.Han
 				http.Error(w, "Authentication required", http.StatusUnauthorized)
 				return
 			}
-
-			fmt.Printf("Cookie Expires: %v, IsZero: %v, BeforeNow: %v\n",
-				cookie.Expires,
-				cookie.Expires.IsZero(),
-				cookie.Expires.Before(time.Now()))
 
 			// Проверяем срок жизни куки
 			if !cookie.Expires.IsZero() && cookie.Expires.Before(time.Now()) {
