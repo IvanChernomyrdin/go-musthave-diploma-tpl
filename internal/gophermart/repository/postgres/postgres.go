@@ -7,7 +7,7 @@ import (
 	"fmt"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
-	logger "go-musthave-diploma-tpl/internal/gophermart/runtime/logger"
+	logger "go-musthave-diploma-tpl/internal/runtime/logger"
 )
 
 // кастомный логгер записывает в файл runtime/log
