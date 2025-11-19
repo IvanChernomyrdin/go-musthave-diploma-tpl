@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	logger "go-musthave-diploma-tpl/internal/runtime/logger"
+	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 )
 
 type responseWriter struct {

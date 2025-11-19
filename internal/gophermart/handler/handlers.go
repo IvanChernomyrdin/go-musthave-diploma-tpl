@@ -12,8 +12,8 @@ import (
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	service "go-musthave-diploma-tpl/internal/gophermart/service"
 
-	pgk "go-musthave-diploma-tpl/internal/pkg"
-	logger "go-musthave-diploma-tpl/internal/runtime/logger"
+	pgk "go-musthave-diploma-tpl/pkg"
+	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 )
 
 // логгер

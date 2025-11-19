@@ -7,7 +7,7 @@ import (
 	chiRouter "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
 	"go-musthave-diploma-tpl/internal/gophermart/service"
-	logger "go-musthave-diploma-tpl/internal/runtime/logger"
+	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 	"net/http"
 	"os"
 	"os/signal"
