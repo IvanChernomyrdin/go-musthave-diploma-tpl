@@ -5,6 +5,7 @@ import (
 	config "go-musthave-diploma-tpl/internal/gophermart/config"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	chiRouter "go-musthave-diploma-tpl/internal/gophermart/handler"
+	"go-musthave-diploma-tpl/internal/gophermart/listener"
 	"go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
 	"go-musthave-diploma-tpl/internal/gophermart/service"
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
@@ -13,18 +14,20 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func main() {
 	// конфиг
 	cfg := config.Load()
 	// логгер
-	castomLogger := logger.NewHTTPLogger().Logger.Sugar()
+	customLogger := logger.NewHTTPLogger().Logger.Sugar()
 	// бд и миграции
 	if err := db.Init(cfg.DatabaseURI); err != nil {
-		castomLogger.Fatalf("PostgreSQL недоступна: %v", err)
+		customLogger.Fatalf("PostgreSQL недоступна: %v", zap.Error(err))
 	} else {
-		castomLogger.Infof("Миграции применены успешно")
+		customLogger.Infof("Миграции применены успешно")
 	}
 	// chi роутер
 	repo := postgres.New()
@@ -34,6 +37,14 @@ func main() {
 	h := chiRouter.NewHandler(svc)
 	//инициализируем роуты
 	r := chiRouter.NewRouter(h, svc)
+
+	// запускаем слушателя
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// ПЕРЕДАЕМ АДРЕС СЕРВИСА НАЧИСЛЕНИЙ В LISTENER
+	orderListener := listener.NewOrderListener(cfg.DatabaseURI, cfg.AccrualSystemAddress, customLogger)
+	orderListener.Start(ctx)
 
 	//создаём серве
 	server := &http.Server{
@@ -45,23 +56,26 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		castomLogger.Infof("Сервер запущен на %s", cfg.RunAddress)
+		customLogger.Infof("Сервер запущен на %s", cfg.RunAddress)
+		customLogger.Infof("Accrual system address: %s", cfg.AccrualSystemAddress)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			castomLogger.Fatalf("Ошибка сервера: %v", err)
+			customLogger.Fatalf("Ошибка сервера: %v", zap.Error(err))
 		}
 	}()
 
 	<-quit
-	castomLogger.Info("Завершение работы сервера...")
+	customLogger.Info("Завершение работы сервера...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		castomLogger.Fatalf("Принудительное завершение: %v", err)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		customLogger.Fatalf("Принудительное завершение: %v", zap.Error(err))
 	}
 	if err := logger.NewHTTPLogger().Close(); err != nil {
-		castomLogger.Fatalf("Логгер не завершил работу: %v", err)
+		customLogger.Fatalf("Логгер не завершил работу: %v", zap.Error(err))
 	}
-	castomLogger.Info("Сервер остановлен")
+	customLogger.Info("Сервер остановлен")
 }

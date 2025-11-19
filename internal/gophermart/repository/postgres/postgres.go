@@ -4,10 +4,13 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
+
+	"go.uber.org/zap"
 )
 
 // кастомный логгер записывает в файл runtime/log
@@ -16,6 +19,7 @@ var castomLogger = logger.NewHTTPLogger().Sugar()
 type PostgresStorage struct {
 	db              *sql.DB
 	errorClassifier *PostgresErrorClassifier
+	logger          logger.HTTPLogger
 }
 
 func New() *PostgresStorage {
@@ -164,6 +168,10 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
             END as result`
 
 	var result string
+	var orderID sql.NullInt64
+	var orderUserID sql.NullInt64
+	var orderNumberStr sql.NullString
+	var orderStatus sql.NullString
 	err := ps.db.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
 
 	if err != nil {
@@ -172,6 +180,17 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 
 	switch result {
 	case "inserted":
+		if orderID.Valid {
+			err := ps.sendOrderNotification(
+				int(orderID.Int64),
+				int(orderUserID.Int64),
+				orderNumberStr.String,
+				orderStatus.String,
+			)
+			if err != nil {
+				ps.logger.Error("Failed to send notification", zap.Error(err))
+			}
+		}
 		return nil
 	case "duplicate":
 		return models.ErrDuplicateOrder
@@ -182,6 +201,28 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 	default:
 		return fmt.Errorf("unexpected result: %s", result)
 	}
+}
+
+func (ps *PostgresStorage) sendOrderNotification(orderID, userID int, number, status string) error {
+	notification := map[string]interface{}{
+		"operation": "INSERT",
+		"order_id":  orderID,
+		"user_id":   userID,
+		"number":    number,
+		"status":    status,
+	}
+
+	jsonData, err := json.Marshal(notification)
+	if err != nil {
+		return fmt.Errorf("failed to marshal notification: %w", err)
+	}
+
+	_, err = ps.db.Exec("SELECT pg_notify('new_orders', $1)", string(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to send notification: %w", err)
+	}
+
+	return nil
 }
 
 func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
