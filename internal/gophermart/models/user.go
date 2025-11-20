@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type RegisterRequest struct {
 	Login    string `json:"login"`
@@ -13,3 +16,7 @@ type User struct {
 	PasswordHash string    `json:"-" db:"password_hash"`
 	CreatedAt    time.Time `json:"-" db:"created_at    "`
 }
+
+var (
+	ErrLoginAndPasswordRequired = errors.New("login and password are required")
+)

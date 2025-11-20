@@ -35,7 +35,7 @@ func NewRouter(h *Handler, svc *service.GofemartService) http.Handler {
 				// получение текущего баланса счёта баллов лояльности пользователя
 				r.Get("/", h.GetBalance)
 				// запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
-				// r.Post("/withdraw", h.BalanceWithdraw)
+				r.Post("/withdraw", h.Withdraw)
 			})
 			// получение информации о выводе средств с накопительного счёта пользователем
 			// r.Get("/withdrawals", h.Withdrawals)

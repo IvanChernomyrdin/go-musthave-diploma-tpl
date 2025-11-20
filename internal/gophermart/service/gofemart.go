@@ -17,6 +17,8 @@ type GofemartRepo interface {
 	GetOrders(userID int) ([]models.Order, error)
 	// получение баланса
 	GetBalance(userID int) (models.Balance, error)
+	// запрос на списание средств
+	Withdraw(userID int, withdraw models.WithdrawBalance) error
 }
 
 // GofemartService - сервис с бизнес-логикой
@@ -90,4 +92,8 @@ func (s *GofemartService) GetBalance(userID int) (models.Balance, error) {
 		return models.Balance{}, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetBalance(userID)
+}
+
+func (s *GofemartService) Withdraw(userID int, withdraw models.WithdrawBalance) error {
+	return s.repo.Withdraw(userID, withdraw)
 }

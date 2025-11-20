@@ -34,10 +34,9 @@ func TestRouter_MiddlewareChain(t *testing.T) {
 
 	t.Run("Защищенные маршруты требуют аутентификации", func(t *testing.T) {
 		protectedRoutes := []string{
-			"/api/user/test-auth",
 			"/api/user/orders",
 			"/api/user/balance",
-			"/api/user/withdrawals",
+			"/api/user/balance/withdraw",
 		}
 
 		for _, route := range protectedRoutes {

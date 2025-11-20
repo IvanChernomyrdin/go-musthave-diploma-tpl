@@ -32,7 +32,7 @@ func TestLoginHandler(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name: "Успешный логин",
+			name: "Successful login",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "correctpassword",
@@ -48,7 +48,7 @@ func TestLoginHandler(t *testing.T) {
 			expectedBody:   "Successfully logged in",
 		},
 		{
-			name: "Неверный пароль",
+			name: "invalid login or password",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "wrongpassword",
@@ -58,10 +58,10 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   "invalid login or password",
 		},
 		{
-			name: "Несуществующий пользователь",
+			name: "invalid login or password",
 			payload: map[string]string{
 				"login":    "nonexistent",
 				"password": "password",
@@ -71,10 +71,10 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   "invalid login or password",
 		},
 		{
-			name: "Пустой логин",
+			name: "Empty login",
 			payload: map[string]string{
 				"login":    "",
 				"password": "password",
@@ -84,7 +84,7 @@ func TestLoginHandler(t *testing.T) {
 			expectedBody:   "Login and password are required",
 		},
 		{
-			name: "Ошибка базы данных",
+			name: "Database error",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "password",

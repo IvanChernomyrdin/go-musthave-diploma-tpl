@@ -23,6 +23,14 @@ type Handler struct {
 	svc *service.GofemartService
 }
 
+var (
+	ErrInvalidUserID          = errors.New("invalid user ID")
+	ErrInternalServerError    = errors.New("internal server error")
+	ErrInvalidJsonFormat      = errors.New("invalid JSON format")
+	ErrUserIsNotAuthenticated = errors.New("user is not authenticated")
+	ErrOrderNumberRequired    = errors.New("Order number is required")
+)
+
 func NewHandler(svc *service.GofemartService) *Handler {
 	return &Handler{svc: svc}
 }
@@ -41,25 +49,25 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, "Login and password are required", http.StatusBadRequest)
+		http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.RegisterUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case "login and password are required":
-			http.Error(w, "Login and password are required", http.StatusBadRequest)
+		case models.ErrLoginAndPasswordRequired.Error():
+			http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		case "login already exists":
 			http.Error(w, "Login already taken", http.StatusConflict)
 		default:
 			castomLogger.Infof("Error registering user: %v\n", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -91,12 +99,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, "Login and password are required", http.StatusBadRequest)
+		http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -104,10 +112,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err.Error() {
 		case "invalid login or password":
-			http.Error(w, "Invalid login or password", http.StatusUnauthorized) // 401!
+			http.Error(w, err.Error(), http.StatusUnauthorized) // 401!
 		default:
 			castomLogger.Infof("Error logging in user: %v\n", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -126,19 +134,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
-	// нужно реализовать 200, 202, 400, 401, 409, 422, 500
-	// пароверили метод text
 	if r.Header.Get("Content-Type") != "text/plain" {
-		http.Error(w, "неверный формат запроса", http.StatusBadRequest) // 400
+		http.Error(w, "Content-Type must be text/plain", http.StatusBadRequest)
 		return
 	}
-	// проверили cookie
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized) // 401
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
 		return
 	}
-	// читаем тело
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
@@ -147,69 +152,68 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	// убираем пробелы из строки
 	number := strings.TrimSpace(string(body))
-	// строка должан быть не пустая
+	// строка должна быть не пустая
 	if number == "" {
-		http.Error(w, "Order number is required", http.StatusBadRequest)
+		http.Error(w, ErrOrderNumberRequired.Error(), http.StatusBadRequest)
 		return
 	}
 	// проверяем что в строке все цифры
 	if !pgk.ContainsOnlyDigits(number) {
-		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity) //422
+		http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	// проходим алгоритмом луна
+	// прогоняем по алгоритму лунтика(luhn)
 	if !pgk.ValidateLuhn(number) {
-		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity)
+		http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
 	// Преобразуем string в int64
 	userIDint, err := strconv.Atoi(userID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		http.Error(w, ErrInvalidUserID.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	// если всё удачно записываем в бд
 	err = h.svc.CreateOrder(userIDint, number)
 	if err != nil {
 		switch {
-		case errors.Is(err, models.ErrDuplicateOrder):
-			w.WriteHeader(http.StatusOK) //200 если уже был загружен
+		case errors.Is(err, models.ErrDuplicateOrder): //200 если уже был загружен
+			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(err.Error()))
 		case errors.Is(err, models.ErrOtherUserOrder): //409 если другой пользователь уже загрузил
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(err.Error()))
 		default:
-			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError) //500
+			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError) //500
 		}
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("успешное создание заказа"))
+	w.Write([]byte("Successful order creation"))
 }
 
 func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	userIDint, err := strconv.Atoi(userID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		http.Error(w, ErrInvalidUserID.Error(), http.StatusInternalServerError)
 		return
 	}
 	result, err := h.svc.GetOrders(userIDint)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("внутренняя ошибка сервера"))
+		w.Write([]byte(ErrInternalServerError.Error()))
 	}
 	if len(result) == 0 {
 		w.WriteHeader(http.StatusNoContent)
-		w.Write([]byte("нет данных для ответа"))
+		w.Write([]byte("No information to answer"))
 	}
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -219,19 +223,19 @@ func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	userIDint, err := strconv.Atoi(userID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		http.Error(w, ErrInvalidUserID.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	result, err := h.svc.GetBalance(userIDint)
 	if err != nil {
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -239,7 +243,66 @@ func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(result); err != nil {
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
+		return
+	}
+	userIDint, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, ErrInvalidUserID.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		return
+	}
+
+	var withdraw models.WithdrawBalance
+	if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
+		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
+		return
+	}
+	// прогоняем по луне и делаем проверки как в CreateOrder
+	number := strings.TrimSpace(withdraw.Order)
+	if number == "" {
+		http.Error(w, ErrOrderNumberRequired.Error(), http.StatusBadRequest)
+		return
+	}
+	if !pgk.ContainsOnlyDigits(number) {
+		http.Error(w, models.ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+	if !pgk.ValidateLuhn(number) {
+		http.Error(w, models.ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	if withdraw.Sum <= 0 {
+		http.Error(w, "Sum must be positive", http.StatusBadRequest)
+		return
+	}
+
+	err = h.svc.Withdraw(userIDint, withdraw)
+	if err != nil {
+		switch err {
+		case models.ErrInvalidOrderNumber:
+			http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
+		case models.ErrLackOfFunds:
+			http.Error(w, models.ErrLackOfFunds.Error(), http.StatusPaymentRequired)
+		default:
+			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Withdrawal successful"))
 }

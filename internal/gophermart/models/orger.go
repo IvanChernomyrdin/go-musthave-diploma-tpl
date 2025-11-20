@@ -23,6 +23,9 @@ const (
 )
 
 var (
-	ErrDuplicateOrder = errors.New("номер уже был загружен этим пользователем")
-	ErrOtherUserOrder = errors.New("номер загружен другим пользователем")
+	ErrDuplicateOrder = errors.New("the number has already been downloaded by this user")
+	ErrOtherUserOrder = errors.New("number uploaded by another user")
+
+	ErrInvalidOrderNumber = errors.New("invalid order number")
+	ErrLackOfFunds        = errors.New("lack of funds")
 )

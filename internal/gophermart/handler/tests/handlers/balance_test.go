@@ -47,13 +47,13 @@ func TestHandler_GetBalance(t *testing.T) {
 			expectedBody:   `{"current":500.5,"withdrawn":42}` + "\n",
 		},
 		{
-			name: "Пользователь не аутентифицирован",
+			name: "User is not authenticated",
 			setupContext: func(ctx context.Context) context.Context {
 				return ctx // без userID
 			},
 			setupMock:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "пользователь не аутентифицирован\n",
+			expectedBody:   "User is not authenticated\n",
 		},
 		{
 			name: "Ошибка сервиса",
@@ -64,7 +64,7 @@ func TestHandler_GetBalance(t *testing.T) {
 				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{}, assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "внутренняя ошибка сервера\n",
+			expectedBody:   "Internal server error\n",
 		},
 		{
 			name: "Неверный userID в контексте",

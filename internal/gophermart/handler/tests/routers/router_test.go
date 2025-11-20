@@ -54,9 +54,9 @@ func TestRouter_Routes(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "Защищенный маршрут без аутентификации",
-			method:         "GET",
-			path:           "/api/user/test-auth",
+			name:           "Запрос на списание средств",
+			method:         "POST",
+			path:           "/api/user/balance/withdraw",
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{

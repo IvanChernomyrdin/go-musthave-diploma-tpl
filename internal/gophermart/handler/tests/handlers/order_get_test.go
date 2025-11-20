@@ -36,7 +36,7 @@ func TestGetOrdersHandler(t *testing.T) {
 		checkJSON      bool
 	}{
 		{
-			name:   "Успешное получение заказов",
+			name:   "Successful orders retrieval",
 			userID: "1",
 			mockSetup: func() {
 				mockRepo.EXPECT().GetOrders(1).
@@ -59,34 +59,34 @@ func TestGetOrdersHandler(t *testing.T) {
 			checkJSON:      true,
 		},
 		{
-			name:   "Нет заказов",
+			name:   "No orders",
 			userID: "1",
 			mockSetup: func() {
 				mockRepo.EXPECT().GetOrders(1).
 					Return([]models.Order{}, nil)
 			},
 			expectedStatus: http.StatusNoContent,
-			expectedBody:   "нет данных для ответа",
+			expectedBody:   "No information to answer",
 		},
 		{
-			name:   "Ошибка базы данных",
+			name:   "Database error",
 			userID: "1",
 			mockSetup: func() {
 				mockRepo.EXPECT().GetOrders(1).
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "внутренняя ошибка сервера",
+			expectedBody:   "Internal server error",
 		},
 		{
-			name:           "Пользователь не аутентифицирован",
+			name:           "User is not authenticated",
 			userID:         "",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "пользователь не аутентифицирован",
+			expectedBody:   "User is not authenticated",
 		},
 		{
-			name:           "Неверный userID",
+			name:           "Invalid userID",
 			userID:         "invalid",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusInternalServerError,

@@ -10,28 +10,25 @@ import (
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 )
 
-// кастомный логгер записывает в файл runtime/log
 var castomLogger = logger.NewHTTPLogger().Sugar()
 
 type PostgresStorage struct {
-	db              *sql.DB
+	DB              *sql.DB
 	errorClassifier *PostgresErrorClassifier
 }
 
 func New() *PostgresStorage {
 	return &PostgresStorage{
-		db:              db.DB,
+		DB:              db.DB,
 		errorClassifier: NewPostgresErrorClassifier(),
 	}
 }
 
-// хешируем пароль в sha256
 func HashPassword(password string) string {
 	hash := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(hash[:])
 }
 
-// ищем по логину (для проверки существования)
 func (ps *PostgresStorage) GetUserByLogin(login string) (*models.User, error) {
 	var user models.User
 
@@ -42,7 +39,7 @@ func (ps *PostgresStorage) GetUserByLogin(login string) (*models.User, error) {
 					created_at 
 				FROM users 
 				WHERE login = $1`
-	err := ps.db.QueryRow(query, login).Scan(&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt)
+	err := ps.DB.QueryRow(query, login).Scan(&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -53,12 +50,11 @@ func (ps *PostgresStorage) GetUserByLogin(login string) (*models.User, error) {
 	return &user, nil
 }
 
-// получение пользователя по id
 func (ps *PostgresStorage) GetUserByID(id int) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, login, password_hash, created_at FROM users WHERE id = $1`
 
-	err := ps.db.QueryRow(query, id).Scan(
+	err := ps.DB.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Login,
 		&user.PasswordHash,
@@ -76,7 +72,6 @@ func (ps *PostgresStorage) GetUserByID(id int) (*models.User, error) {
 	return &user, nil
 }
 
-// ищем по логину и паролю
 func (ps *PostgresStorage) GetUserByLoginAndPassword(login, password string) (*models.User, error) {
 	var user models.User
 	hashedPassword := HashPassword(password)
@@ -89,7 +84,7 @@ func (ps *PostgresStorage) GetUserByLoginAndPassword(login, password string) (*m
 				FROM users 
 				WHERE login = $1 
 					AND password_hash = $2`
-	err := ps.db.QueryRow(query, login, hashedPassword).Scan(&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt)
+	err := ps.DB.QueryRow(query, login, hashedPassword).Scan(&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -101,7 +96,6 @@ func (ps *PostgresStorage) GetUserByLoginAndPassword(login, password string) (*m
 	return &user, nil
 }
 
-// создаём пользователя
 func (ps *PostgresStorage) CreateUser(login, password string) (*models.User, error) {
 	// проверяем что такого логина нет (используем GetUserByLogin)
 	existingUser, err := ps.GetUserByLogin(login)
@@ -121,7 +115,7 @@ func (ps *PostgresStorage) CreateUser(login, password string) (*models.User, err
         	  VALUES ($1, $2) 
         	  RETURNING id, login, password_hash, created_at`
 
-	err = ps.db.QueryRow(query, login, hashedPassword).Scan(
+	err = ps.DB.QueryRow(query, login, hashedPassword).Scan(
 		&user.ID,
 		&user.Login,
 		&user.PasswordHash,
@@ -136,14 +130,6 @@ func (ps *PostgresStorage) CreateUser(login, password string) (*models.User, err
 	return &user, nil
 }
 
-func NewWithDB(db *sql.DB) *PostgresStorage {
-	return &PostgresStorage{
-		db:              db,
-		errorClassifier: NewPostgresErrorClassifier(),
-	}
-}
-
-// проверяем на существование заказ, если его нет добавляем
 func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 	query := `
         WITH inserted AS (
@@ -164,7 +150,7 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
             END as result`
 
 	var result string
-	err := ps.db.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
+	err := ps.DB.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
 
 	if err != nil {
 		return fmt.Errorf("failed to create order: %w", err)
@@ -185,7 +171,7 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 }
 
 func (ps *PostgresStorage) GetOrders(userID int) ([]models.Order, error) {
-	rows, err := ps.db.Query(`
+	rows, err := ps.DB.Query(`
         SELECT number, status, accrual, uploaded_at 
         FROM orders WHERE user_id = $1 
         ORDER BY uploaded_at DESC`, userID)
@@ -218,7 +204,7 @@ func (ps *PostgresStorage) GetBalance(userID int) (models.Balance, error) {
 		(SELECT COALESCE(SUM(accrual), 0) FROM orders WHERE user_id = $1 AND status = 'PROCESSED') as current,
 		(SELECT COALESCE(SUM(sum), 0) FROM withdrawals WHERE user_id = $1) as withdrawn`
 
-	err := ps.db.QueryRow(query, userID).Scan(&balance.Current, &balance.Withdrawn)
+	err := ps.DB.QueryRow(query, userID).Scan(&balance.Current, &balance.Withdrawn)
 	if err == sql.ErrNoRows {
 		return models.Balance{Current: 0, Withdrawn: 0}, nil
 	}
@@ -227,4 +213,59 @@ func (ps *PostgresStorage) GetBalance(userID int) (models.Balance, error) {
 	}
 
 	return balance, nil
+}
+
+func (ps *PostgresStorage) Withdraw(userID int, withdraw models.WithdrawBalance) error {
+	// работаем через транзакцию
+	tx, err := ps.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// проверяем что заказ  есть по номеру
+	var exists bool
+	err = tx.QueryRow(`SELECT EXISTS(
+									SELECT 1 
+									FROM orders 
+									WHERE number = $1)
+						`, withdraw.Order).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return models.ErrInvalidOrderNumber
+	}
+	// получаем баланс пользователя
+	var balance float64
+	err = tx.QueryRow(`SELECT 
+        					COALESCE((
+            					SELECT SUM(accrual) FROM orders WHERE user_id = $1
+        					), 0) - 
+        					COALESCE((
+            					SELECT SUM(sum) FROM withdrawals WHERE user_id = $1
+        					), 0) AS balance`, userID).Scan(&balance)
+	if err != nil {
+		return err
+	}
+	// проверяем хватает ли баллов
+	if balance-withdraw.Sum < 0 {
+		return models.ErrLackOfFunds
+	}
+
+	// если хватает записываем новое списание
+	_, err = tx.Exec(`INSERT INTO withdrawals
+							(user_id, order_number, sum)
+						VALUES
+							($1, $2, $3)`, userID, withdraw.Order, withdraw.Sum)
+	if err != nil {
+		return err
+	}
+
+	// коммитим
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
