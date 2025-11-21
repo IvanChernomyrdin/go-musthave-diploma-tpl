@@ -57,7 +57,7 @@ func TestWithdrawHandler(t *testing.T) {
 				}).Return(handler.ErrInvalidOrderNumber)
 			},
 			expectedStatus: http.StatusUnprocessableEntity,
-			expectedBody:   "Invalid order number",
+			expectedBody:   handler.ErrInvalidOrderNumber.Error(),
 		},
 		{
 			name:   "Insufficient funds",
@@ -73,10 +73,10 @@ func TestWithdrawHandler(t *testing.T) {
 				}).Return(handler.ErrLackOfFunds)
 			},
 			expectedStatus: http.StatusPaymentRequired,
-			expectedBody:   "Lack of funds",
+			expectedBody:   "lack of funds",
 		},
 		{
-			name:   "Internal server error",
+			name:   "internal server error",
 			userID: "1",
 			requestBody: models.WithdrawBalance{
 				Order: "2377225624",
@@ -89,15 +89,15 @@ func TestWithdrawHandler(t *testing.T) {
 				}).Return(errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
-			name:           "User is not authenticated",
+			name:           handler.ErrUserIsNotAuthenticated.Error(),
 			userID:         "",
 			requestBody:    models.WithdrawBalance{Order: "2377225624", Sum: 751},
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
 			name:           "Invalid userID",
@@ -105,7 +105,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    models.WithdrawBalance{Order: "2377225624", Sum: 751},
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID",
+			expectedBody:   handler.ErrInvalidUserID.Error(),
 		},
 		{
 			name:           "Invalid Content-Type",
@@ -113,7 +113,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    models.WithdrawBalance{Order: "2377225624", Sum: 751},
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid request format",
+			expectedBody:   "content-type must be application/json",
 		},
 		{
 			name:           "Empty order number",
@@ -121,7 +121,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    models.WithdrawBalance{Order: "", Sum: 751},
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Order number is required",
+			expectedBody:   handler.ErrOrderNumberRequired.Error(),
 		},
 		{
 			name:           "Sum less than or equal to 0",
@@ -129,7 +129,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    models.WithdrawBalance{Order: "2377225624", Sum: 0},
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Sum must be positive",
+			expectedBody:   "sum must be positive",
 		},
 		{
 			name:           "Invalid JSON",
@@ -137,7 +137,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    "{invalid json",
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid JSON format",
+			expectedBody:   handler.ErrInvalidJsonFormat.Error(),
 		},
 	}
 

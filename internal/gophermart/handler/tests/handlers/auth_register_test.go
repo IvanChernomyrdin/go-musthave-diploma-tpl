@@ -32,7 +32,7 @@ func TestRegisterHandler(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name: "Успешная регистрация",
+			name: "Sucessfully register",
 			payload: map[string]string{
 				"login":    "newuser",
 				"password": "password123",
@@ -48,7 +48,7 @@ func TestRegisterHandler(t *testing.T) {
 			expectedBody:   "User successfully registered",
 		},
 		{
-			name: "Логин уже занят",
+			name: "Login already taken",
 			payload: map[string]string{
 				"login":    "existinguser",
 				"password": "password123",
@@ -58,30 +58,30 @@ func TestRegisterHandler(t *testing.T) {
 					Return(nil, fmt.Errorf("login already exists"))
 			},
 			expectedStatus: http.StatusConflict,
-			expectedBody:   "Login already taken",
+			expectedBody:   "login already taken",
 		},
 		{
-			name: "Пустой логин",
+			name: "Empty login",
 			payload: map[string]string{
 				"login":    "",
 				"password": "password123",
 			},
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
 		},
 		{
-			name: "Пустой пароль",
+			name: "Empty password",
 			payload: map[string]string{
 				"login":    "user",
 				"password": "",
 			},
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
 		},
 		{
-			name: "Ошибка сервера",
+			name: "Database error",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "password123",
@@ -91,14 +91,14 @@ func TestRegisterHandler(t *testing.T) {
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
 			name:           "Неверный JSON",
 			payload:        "invalid json",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid JSON format",
+			expectedBody:   handler.ErrInvalidJsonFormat.Error(),
 		},
 	}
 

@@ -33,7 +33,7 @@ func TestHandler_GetBalance(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name: "Успешное получение баланса",
+			name: "Successfully taken balance",
 			setupContext: func(ctx context.Context) context.Context {
 				return context.WithValue(ctx, middleware.UserIDKey, "1")
 			},
@@ -47,16 +47,16 @@ func TestHandler_GetBalance(t *testing.T) {
 			expectedBody:   `{"current":500.5,"withdrawn":42}` + "\n",
 		},
 		{
-			name: "User is not authenticated",
+			name: handler.ErrUserIsNotAuthenticated.Error(),
 			setupContext: func(ctx context.Context) context.Context {
 				return ctx // без userID
 			},
 			setupMock:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated\n",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error() + "\n",
 		},
 		{
-			name: "Ошибка сервиса",
+			name: "Server error",
 			setupContext: func(ctx context.Context) context.Context {
 				return context.WithValue(ctx, middleware.UserIDKey, "1")
 			},
@@ -64,16 +64,16 @@ func TestHandler_GetBalance(t *testing.T) {
 				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{}, assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error\n",
+			expectedBody:   handler.ErrInternalServerError.Error() + "\n",
 		},
 		{
-			name: "Неверный userID в контексте",
+			name: "Invalid userID in context",
 			setupContext: func(ctx context.Context) context.Context {
 				return context.WithValue(ctx, middleware.UserIDKey, "invalid")
 			},
 			setupMock:      func() {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID\n",
+			expectedBody:   handler.ErrInvalidUserID.Error() + "\n",
 		},
 	}
 

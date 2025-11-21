@@ -23,23 +23,23 @@ func TestRouter_WithdrawRoutes(t *testing.T) {
 
 	router := handler.NewRouter(h, svc)
 
-	t.Run("POST /api/user/orbalance/withdraw ders - защищенный маршрут", func(t *testing.T) {
+	t.Run("POST /api/user/orbalance/withdraw - protected route", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/user/balance/withdraw", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code,
-			"POST /api/user/balance/withdraw должен требовать аутентификации")
+			"POST /api/user/balance/withdraw must require authentication")
 	})
 
-	t.Run("Неподдерживаемый метод для /api/user/balance/withdraw", func(t *testing.T) {
+	t.Run("Unsupported method for /api/user/balance/withdraw", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/user/balance/withdraw", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.NotEqual(t, http.StatusNotFound, rr.Code,
-			"PUT /api/user/balance/withdraw не должен возвращать 404")
+			"PUT /api/user/balance/withdraw should not return 404")
 	})
 }

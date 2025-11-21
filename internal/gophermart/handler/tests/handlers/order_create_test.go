@@ -52,16 +52,16 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:           "12345678903",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid request format",
+			expectedBody:   "content-type must be text/plain",
 		},
 		{
-			name:           "User is not authenticated",
+			name:           handler.ErrUserIsNotAuthenticated.Error(),
 			userID:         "",
 			contentType:    "text/plain",
 			body:           "12345678903",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
 			name:           "Empty order number",
@@ -70,7 +70,7 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:           "",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Order number is required",
+			expectedBody:   handler.ErrOrderNumberRequired.Error(),
 		},
 		{
 			name:           "Number contains non-digit characters",
@@ -79,7 +79,7 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:           "123abc456",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnprocessableEntity,
-			expectedBody:   "Invalid number format",
+			expectedBody:   handler.ErrInvalidOrderNumber.Error(),
 		},
 		{
 			name:           "Invalid Luhn number",
@@ -88,7 +88,7 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:           "1234567890",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnprocessableEntity,
-			expectedBody:   "Invalid number format",
+			expectedBody:   handler.ErrInvalidOrderNumber.Error(),
 		},
 		{
 			name:        "Duplicate order from same user",
@@ -124,7 +124,7 @@ func TestCreateOrderHandler(t *testing.T) {
 					Return(fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
 			name:           "Invalid userID",
@@ -133,7 +133,7 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:           "12345678903",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID",
+			expectedBody:   handler.ErrInvalidUserID.Error(),
 		},
 	}
 

@@ -59,7 +59,7 @@ func (s *GofemartService) LoginUser(login, password string) (*models.User, error
 	}
 
 	if user == nil {
-		return nil, fmt.Errorf("Invalid login or password")
+		return nil, fmt.Errorf("invalid login or password")
 	}
 
 	return user, nil
@@ -67,7 +67,7 @@ func (s *GofemartService) LoginUser(login, password string) (*models.User, error
 
 func (s *GofemartService) GetUserByID(userID int) (*models.User, error) {
 	if userID <= 0 {
-		return nil, fmt.Errorf("Invalid user ID")
+		return nil, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetUserByID(userID)
 }
@@ -75,11 +75,11 @@ func (s *GofemartService) GetUserByID(userID int) (*models.User, error) {
 // CreateOrder - создание нового заказа
 func (s *GofemartService) CreateOrder(userID int, orderNumber string) error {
 	if userID <= 0 {
-		return fmt.Errorf("Invalid user ID")
+		return fmt.Errorf("invalid user ID")
 	}
 
 	if orderNumber == "" {
-		return fmt.Errorf("Order number is required")
+		return fmt.Errorf("order number is required")
 	}
 
 	return s.repo.CreateOrder(userID, orderNumber)
@@ -87,14 +87,14 @@ func (s *GofemartService) CreateOrder(userID int, orderNumber string) error {
 
 func (s *GofemartService) GetOrders(userID int) ([]models.Order, error) {
 	if userID <= 0 {
-		return nil, fmt.Errorf("Invalid user ID")
+		return nil, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetOrders(userID)
 }
 
 func (s *GofemartService) GetBalance(userID int) (models.Balance, error) {
 	if userID <= 0 {
-		return models.Balance{}, fmt.Errorf("Invalid user ID")
+		return models.Balance{}, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetBalance(userID)
 }

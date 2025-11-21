@@ -30,37 +30,37 @@ func TestRouter_Routes(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:           "Регистрация пользователя",
+			name:           "Registration",
 			method:         "POST",
 			path:           "/api/user/register",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Логин пользователя",
+			name:           "Login",
 			method:         "POST",
 			path:           "/api/user/login",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Создание заказа без аутентификации",
+			name:           "Create order without authentication",
 			method:         "POST",
 			path:           "/api/user/orders",
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "Получение заказов без аутентификации",
+			name:           "Get order without authentication",
 			method:         "GET",
 			path:           "/api/user/orders",
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "Запрос на списание средств",
+			name:           "Request for withdrawal of funds",
 			method:         "POST",
 			path:           "/api/user/balance/withdraw",
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "Несуществующий маршрут",
+			name:           "Non-existent route",
 			method:         "GET",
 			path:           "/api/not-found",
 			expectedStatus: http.StatusNotFound,
@@ -75,7 +75,7 @@ func TestRouter_Routes(t *testing.T) {
 			router.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code,
-				"Для пути %s ожидался статус %d, получен %d",
+				"Status %s expected for path %d, got %d",
 				tt.path, tt.expectedStatus, rr.Code)
 		})
 	}
@@ -105,7 +105,7 @@ func TestRouter_RouteStructure(t *testing.T) {
 			router.ServeHTTP(rr, req)
 
 			assert.NotEqual(t, http.StatusNotFound, rr.Code,
-				"Маршрут %s не должен возвращать 404", route)
+				"Route %s should not return 404", route)
 		})
 	}
 }

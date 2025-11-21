@@ -29,7 +29,7 @@ func TestCookieMiddleware_Success(t *testing.T) {
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := middlewareDir.GetUserID(r.Context())
 		if userID != "123" {
-			t.Errorf("Expected userID 123, got %s", userID)
+			t.Errorf("expected userID 123, got %s", userID)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -42,7 +42,7 @@ func TestCookieMiddleware_Success(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", rr.Code)
+		t.Errorf("expected status 200, got %d", rr.Code)
 	}
 }
 
@@ -59,7 +59,7 @@ func TestCookieMiddleware_UserNotFound(t *testing.T) {
 
 	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("Handler should not be called when user not found")
+		t.Error("handler should not be called when user not found")
 	}))
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -70,7 +70,7 @@ func TestCookieMiddleware_UserNotFound(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+		t.Errorf("expected status 401, got %d", rr.Code)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestCookieMiddleware_NoCookie(t *testing.T) {
 
 	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("Handler should not be called when no cookie")
+		t.Error("handler should not be called when no cookie")
 	}))
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -92,7 +92,7 @@ func TestCookieMiddleware_NoCookie(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+		t.Errorf("expected status 401, got %d", rr.Code)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestCookieMiddleware_InvalidEncryption(t *testing.T) {
 
 	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Error("Handler should not be called with invalid encryption")
+		t.Error("handler should not be called with invalid encryption")
 	}))
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -115,7 +115,7 @@ func TestCookieMiddleware_InvalidEncryption(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status 401, got %d", rr.Code)
+		t.Errorf("expected status 401, got %d", rr.Code)
 	}
 }
 
@@ -126,42 +126,42 @@ func TestSetEncryptedCookie(t *testing.T) {
 
 	cookies := rr.Result().Cookies()
 	if len(cookies) != 1 {
-		t.Fatalf("Expected 1 cookie, got %d", len(cookies))
+		t.Fatalf("expected 1 cookie, got %d", len(cookies))
 	}
 
 	cookie := cookies[0]
 	if cookie.Name != "userID" {
-		t.Errorf("Expected cookie name 'userID', got '%s'", cookie.Name)
+		t.Errorf("expected cookie name 'userID', got '%s'", cookie.Name)
 	}
 	if cookie.Value == "123" {
-		t.Error("Cookie value should be encrypted")
+		t.Error("cookie value should be encrypted")
 	}
 	if cookie.HttpOnly != true {
-		t.Error("Cookie should be HttpOnly")
+		t.Error("cookie should be HttpOnly")
 	}
 }
 
 func TestGetUserID(t *testing.T) {
-	t.Run("Успешное получение userID из контекста", func(t *testing.T) {
+	t.Run("Successfully retrieved userID from context", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), middlewareDir.UserIDKey, "123")
 
 		userID, err := middlewareDir.GetUserID(ctx)
 
 		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("unexpected error: %v", err)
 		}
 		if userID != "123" {
-			t.Errorf("Expected userID '123', got '%s'", userID)
+			t.Errorf("expected userID '123', got '%s'", userID)
 		}
 	})
 
-	t.Run("Ошибка когда userID отсутствует в контексте", func(t *testing.T) {
+	t.Run("Error when userID is missing from context", func(t *testing.T) {
 		ctx := context.Background()
 
 		_, err := middlewareDir.GetUserID(ctx)
 
 		if err == nil {
-			t.Error("Expected error when userID not in context")
+			t.Error("expected error when userID not in context")
 		}
 	})
 }

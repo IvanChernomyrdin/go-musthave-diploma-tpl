@@ -66,7 +66,7 @@ func TestGetOrdersHandler(t *testing.T) {
 					Return([]models.Order{}, nil)
 			},
 			expectedStatus: http.StatusNoContent,
-			expectedBody:   "No information to answer",
+			expectedBody:   "no information to answer",
 		},
 		{
 			name:   "Database error",
@@ -76,21 +76,21 @@ func TestGetOrdersHandler(t *testing.T) {
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
-			name:           "User is not authenticated",
+			name:           handler.ErrUserIsNotAuthenticated.Error(),
 			userID:         "",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
 			name:           "Invalid userID",
 			userID:         "invalid",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID",
+			expectedBody:   handler.ErrInvalidUserID.Error(),
 		},
 	}
 

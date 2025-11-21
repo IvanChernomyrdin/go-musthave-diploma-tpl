@@ -58,7 +58,7 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   handler.ErrInvalidLoginOrPassword.Error(),
 		},
 		{
 			name: "Invalid login or password",
@@ -71,7 +71,7 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   handler.ErrInvalidLoginOrPassword.Error(),
 		},
 		{
 			name: "Empty login",
@@ -81,7 +81,7 @@ func TestLoginHandler(t *testing.T) {
 			},
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
 		},
 		{
 			name: "Database error",
@@ -94,7 +94,7 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 

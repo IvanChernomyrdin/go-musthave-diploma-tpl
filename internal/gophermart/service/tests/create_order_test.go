@@ -51,7 +51,7 @@ func TestGofemartService_CreateOrder_InvalidUserID(t *testing.T) {
 			err := service.CreateOrder(tt.userID, "12345678903")
 
 			assert.Error(t, err)
-			assert.Equal(t, "Invalid user ID", err.Error())
+			assert.Equal(t, handler.ErrInvalidUserID.Error(), err.Error())
 		})
 	}
 }
@@ -68,7 +68,7 @@ func TestGofemartService_CreateOrder_EmptyOrderNumber(t *testing.T) {
 	err := service.CreateOrder(userID, "")
 
 	assert.Error(t, err)
-	assert.Equal(t, "Order number is required", err.Error())
+	assert.Equal(t, handler.ErrOrderNumberRequired.Error(), err.Error())
 }
 
 func TestGofemartService_CreateOrder_DuplicateOrder(t *testing.T) {

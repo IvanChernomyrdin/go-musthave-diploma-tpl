@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	serviceTest "go-musthave-diploma-tpl/internal/gophermart/service"
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
@@ -58,7 +59,7 @@ func TestGofemartService_GetUserByID_InvalidID(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Nil(t, user)
-			assert.Equal(t, "Invalid user ID", err.Error())
+			assert.Equal(t, handler.ErrInvalidUserID.Error(), err.Error())
 		})
 	}
 }

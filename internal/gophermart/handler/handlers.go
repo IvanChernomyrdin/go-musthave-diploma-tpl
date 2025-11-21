@@ -10,7 +10,7 @@ import (
 
 	"go-musthave-diploma-tpl/internal/gophermart/middleware"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
-	service "go-musthave-diploma-tpl/internal/gophermart/service"
+	"go-musthave-diploma-tpl/internal/gophermart/service"
 
 	pgk "go-musthave-diploma-tpl/pkg"
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
@@ -28,13 +28,8 @@ func NewHandler(svc *service.GofemartService) *Handler {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		http.Error(w, "content-type must be application/json", http.StatusBadRequest)
 		return
 	}
 
@@ -56,9 +51,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		case ErrLoginAndPasswordRequired.Error():
 			http.Error(w, ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		case "login already exists":
-			http.Error(w, "Login already taken", http.StatusConflict)
+			http.Error(w, "login already taken", http.StatusConflict)
 		default:
-			castomLogger.Infof("Error registering user: %v\n", err)
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
 			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
 		return
@@ -78,13 +73,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		http.Error(w, "content-type must be application/json", http.StatusBadRequest)
 		return
 	}
 
@@ -103,10 +93,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := h.svc.LoginUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case "Invalid login or password":
+		case ErrInvalidLoginOrPassword.Error():
 			http.Error(w, err.Error(), http.StatusUnauthorized) // 401!
 		default:
-			castomLogger.Infof("Error logging in user: %v\n", err)
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
 			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
 		return
@@ -127,7 +117,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "text/plain" {
-		http.Error(w, "Content-Type must be text/plain", http.StatusBadRequest)
+		http.Error(w, "content-type must be text/plain", http.StatusBadRequest)
 		return
 	}
 	userID, err := middleware.GetUserID(r.Context())
@@ -138,7 +128,7 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
@@ -171,12 +161,11 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrDuplicateOrder): //200 если уже был загружен
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusOK)
 		case errors.Is(err, ErrOtherUserOrder): //409 если другой пользователь уже загрузил
-			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(err.Error()))
+			http.Error(w, err.Error(), http.StatusConflict)
 		default:
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
 			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError) //500
 		}
 		return
@@ -200,12 +189,12 @@ func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	result, err := h.svc.GetOrders(userIDint)
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(ErrInternalServerError.Error()))
+		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
+		return
 	}
 	if len(result) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		w.Write([]byte("No information to answer"))
+		http.Error(w, "no information to answer", http.StatusNoContent)
+		return
 	}
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -231,13 +220,13 @@ func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +242,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		http.Error(w, "content-type must be application/json", http.StatusBadRequest)
 		return
 	}
 
@@ -278,7 +267,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if withdraw.Sum <= 0 {
-		http.Error(w, "Sum must be positive", http.StatusBadRequest)
+		http.Error(w, "sum must be positive", http.StatusBadRequest)
 		return
 	}
 
@@ -290,6 +279,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		case ErrLackOfFunds:
 			http.Error(w, ErrLackOfFunds.Error(), http.StatusPaymentRequired)
 		default:
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
 			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
 		return

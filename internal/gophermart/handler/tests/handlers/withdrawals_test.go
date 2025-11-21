@@ -69,14 +69,14 @@ func TestHandler_Withdrawals(t *testing.T) {
 			userID:         "",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
 			name:           "Неверный userID",
 			userID:         "invalid",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID",
+			expectedBody:   handler.ErrInvalidUserID.Error(),
 		},
 		{
 			name:   "Ошибка базы данных",
@@ -85,7 +85,7 @@ func TestHandler_Withdrawals(t *testing.T) {
 				mockRepo.EXPECT().Withdrawals(1).Return(nil, assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 

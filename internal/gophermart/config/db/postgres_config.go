@@ -19,28 +19,28 @@ func Init(databaseDSN string) error {
 	var err error
 	DB, err = sql.Open("pgx", connection)
 	if err != nil {
-		return fmt.Errorf("не удалось подключиться к БД: %v", err)
+		return fmt.Errorf("failed to connect to the database: %v", err)
 	}
 
 	if err := DB.Ping(); err != nil {
-		return fmt.Errorf("проверка подключения к БД не удалась: %v", err)
+		return fmt.Errorf("database connection check failed: %v", err)
 	}
 
 	driver, err := postgres.WithInstance(DB, &postgres.Config{})
 	if err != nil {
-		return fmt.Errorf("ошибка создания драйвера миграций: %v", err)
+		return fmt.Errorf("error creating migration driver: %v", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://internal/gophermart/migrations/",
 		"postgres", driver)
 	if err != nil {
-		return fmt.Errorf("ошибка создания миграции для гофемарта: %v", err)
+		return fmt.Errorf("error creating migration for Gofemart: %v", err)
 	}
 
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("ошибка применения миграций для гофемарта: %v", err)
+		return fmt.Errorf("error applying migrations to Gofemart: %v", err)
 	}
 
 	return nil

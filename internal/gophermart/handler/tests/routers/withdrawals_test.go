@@ -62,22 +62,20 @@ func TestWithdrawalsHandler(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:   "User is not authenticated",
+			name:   handler.ErrUserIsNotAuthenticated.Error(),
 			userID: "",
 			mockSetup: func() {
-				// No mock expectations
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "User is not authenticated",
+			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
 			name:   "Invalid userID",
 			userID: "invalid",
 			mockSetup: func() {
-				// No mock expectations
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID",
+			expectedBody:   handler.ErrInvalidUserID.Error(),
 		},
 		{
 			name:   "Database error",
@@ -86,7 +84,7 @@ func TestWithdrawalsHandler(t *testing.T) {
 				mockRepo.EXPECT().Withdrawals(1).Return(nil, assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 
@@ -147,7 +145,7 @@ func TestRouter_WithdrawalsRoute(t *testing.T) {
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		assert.Contains(t, rr.Body.String(), "Authentication required")
+		assert.Contains(t, rr.Body.String(), "authentication required")
 	})
 
 	t.Run("GET /api/user/withdrawals - unsupported method", func(t *testing.T) {
