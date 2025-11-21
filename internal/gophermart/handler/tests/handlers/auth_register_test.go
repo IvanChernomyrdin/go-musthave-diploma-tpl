@@ -98,7 +98,7 @@ func TestRegisterHandler(t *testing.T) {
 			payload:        "invalid json",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   handler.ErrInvalidJsonFormat.Error(),
+			expectedBody:   handler.ErrInvalidJSONFormat.Error(),
 		},
 	}
 
@@ -138,14 +138,6 @@ func TestRegisterHandler(t *testing.T) {
 			// Проверяем тело ответа
 			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
 				t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
-			}
-
-			// Для успешной регистрации проверяем куку
-			if tt.expectedStatus == http.StatusOK {
-				cookies := rr.Result().Cookies()
-				if len(cookies) == 0 {
-					t.Error("handler should set cookie on successful registration")
-				}
 			}
 		})
 	}

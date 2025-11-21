@@ -36,7 +36,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
+		http.Error(w, ErrInvalidJSONFormat.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
+		http.Error(w, ErrInvalidJSONFormat.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -248,7 +248,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	var withdraw models.WithdrawBalance
 	if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
-		http.Error(w, ErrInvalidJsonFormat.Error(), http.StatusBadRequest)
+		http.Error(w, ErrInvalidJSONFormat.Error(), http.StatusBadRequest)
 		return
 	}
 	// прогоняем по луне и делаем проверки как в CreateOrder

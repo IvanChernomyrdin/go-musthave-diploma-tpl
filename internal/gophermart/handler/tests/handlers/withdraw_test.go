@@ -137,7 +137,7 @@ func TestWithdrawHandler(t *testing.T) {
 			requestBody:    "{invalid json",
 			mockSetup:      func(mockRepo *mocks.MockGofemartRepo) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   handler.ErrInvalidJsonFormat.Error(),
+			expectedBody:   handler.ErrInvalidJSONFormat.Error(),
 		},
 	}
 

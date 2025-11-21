@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGofemartService_Withdraw(t *testing.T) {
+func TestGofemartServiceWithdraw(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

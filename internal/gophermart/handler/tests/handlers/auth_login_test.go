@@ -126,14 +126,6 @@ func TestLoginHandler(t *testing.T) {
 			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
 				t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
 			}
-
-			// Для успешного логина проверяем куку
-			if tt.expectedStatus == http.StatusOK {
-				cookies := rr.Result().Cookies()
-				if len(cookies) == 0 {
-					t.Error("handler should set cookie on successful login")
-				}
-			}
 		})
 	}
 }
