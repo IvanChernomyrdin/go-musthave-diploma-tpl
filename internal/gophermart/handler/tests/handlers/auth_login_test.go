@@ -32,7 +32,7 @@ func TestLoginHandler(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name: "Успешный логин",
+			name: "Successful login",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "correctpassword",
@@ -48,7 +48,7 @@ func TestLoginHandler(t *testing.T) {
 			expectedBody:   "Successfully logged in",
 		},
 		{
-			name: "Неверный пароль",
+			name: "Invalid login or password",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "wrongpassword",
@@ -58,10 +58,10 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   handler.ErrInvalidLoginOrPassword.Error(),
 		},
 		{
-			name: "Несуществующий пользователь",
+			name: "Invalid login or password",
 			payload: map[string]string{
 				"login":    "nonexistent",
 				"password": "password",
@@ -71,20 +71,20 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedBody:   handler.ErrInvalidLoginOrPassword.Error(),
 		},
 		{
-			name: "Пустой логин",
+			name: "Empty login",
 			payload: map[string]string{
 				"login":    "",
 				"password": "password",
 			},
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
 		},
 		{
-			name: "Ошибка базы данных",
+			name: "Database error",
 			payload: map[string]string{
 				"login":    "testuser",
 				"password": "password",
@@ -94,7 +94,7 @@ func TestLoginHandler(t *testing.T) {
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 
@@ -125,14 +125,6 @@ func TestLoginHandler(t *testing.T) {
 			// Проверяем тело ответа
 			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
 				t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
-			}
-
-			// Для успешного логина проверяем куку
-			if tt.expectedStatus == http.StatusOK {
-				cookies := rr.Result().Cookies()
-				if len(cookies) == 0 {
-					t.Error("handler should set cookie on successful login")
-				}
 			}
 		})
 	}

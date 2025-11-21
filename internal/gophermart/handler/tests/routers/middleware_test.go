@@ -23,7 +23,7 @@ func TestRouter_MiddlewareChain(t *testing.T) {
 
 	router := handler.NewRouter(h, svc)
 
-	t.Run("Logger middleware подключен", func(t *testing.T) {
+	t.Run("Logger middleware connected", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/user/register", nil)
 		rr := httptest.NewRecorder()
 
@@ -32,12 +32,11 @@ func TestRouter_MiddlewareChain(t *testing.T) {
 		assert.NotEqual(t, http.StatusInternalServerError, rr.Code)
 	})
 
-	t.Run("Защищенные маршруты требуют аутентификации", func(t *testing.T) {
+	t.Run("Protected routes require authentication", func(t *testing.T) {
 		protectedRoutes := []string{
-			"/api/user/test-auth",
 			"/api/user/orders",
 			"/api/user/balance",
-			"/api/user/withdrawals",
+			"/api/user/balance/withdraw",
 		}
 
 		for _, route := range protectedRoutes {
@@ -48,7 +47,7 @@ func TestRouter_MiddlewareChain(t *testing.T) {
 				router.ServeHTTP(rr, req)
 
 				assert.Equal(t, http.StatusUnauthorized, rr.Code,
-					"Для защищенного маршрута %s ожидался статус 401", route)
+					"For protected route %s expected status 401", route)
 			})
 		}
 	})

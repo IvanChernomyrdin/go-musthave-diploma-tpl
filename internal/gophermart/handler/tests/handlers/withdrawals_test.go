@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,9 +16,10 @@ import (
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGetOrdersHandler(t *testing.T) {
+func TestHandler_Withdrawals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -36,61 +36,56 @@ func TestGetOrdersHandler(t *testing.T) {
 		checkJSON      bool
 	}{
 		{
-			name:   "Successful orders retrieval",
+			name:   "Успешное получение списка списаний",
 			userID: "1",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetOrders(1).
-					Return([]models.Order{
-						{
-							Number:     "1234567890",
-							Status:     "PROCESSED",
-							Accrual:    100.5,
-							UploadedAt: time.Now(),
-						},
-						{
-							Number:     "0987654321",
-							Status:     "NEW",
-							Accrual:    0,
-							UploadedAt: time.Now(),
-						},
-					}, nil)
+				expectedWithdrawals := []models.WithdrawBalance{
+					{
+						Order:       "2377225624",
+						Sum:         751.50,
+						ProcessedAt: time.Now().Add(-24 * time.Hour),
+					},
+					{
+						Order:       "49927398716",
+						Sum:         500.25,
+						ProcessedAt: time.Now().Add(-12 * time.Hour),
+					},
+				}
+				mockRepo.EXPECT().Withdrawals(1).Return(expectedWithdrawals, nil)
 			},
 			expectedStatus: http.StatusOK,
 			checkJSON:      true,
 		},
 		{
-			name:   "No orders",
+			name:   "Нет списаний",
 			userID: "1",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetOrders(1).
-					Return([]models.Order{}, nil)
+				mockRepo.EXPECT().Withdrawals(1).Return([]models.WithdrawBalance{}, nil)
 			},
 			expectedStatus: http.StatusNoContent,
-			expectedBody:   "no information to answer",
 		},
 		{
-			name:   "Database error",
-			userID: "1",
-			mockSetup: func() {
-				mockRepo.EXPECT().GetOrders(1).
-					Return(nil, fmt.Errorf("database error"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   handler.ErrInternalServerError.Error(),
-		},
-		{
-			name:           handler.ErrUserIsNotAuthenticated.Error(),
+			name:           "Пользователь не аутентифицирован",
 			userID:         "",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   handler.ErrUserIsNotAuthenticated.Error(),
 		},
 		{
-			name:           "Invalid userID",
+			name:           "Неверный userID",
 			userID:         "invalid",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   handler.ErrInvalidUserID.Error(),
+		},
+		{
+			name:   "Ошибка базы данных",
+			userID: "1",
+			mockSetup: func() {
+				mockRepo.EXPECT().Withdrawals(1).Return(nil, assert.AnError)
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 
@@ -100,7 +95,7 @@ func TestGetOrdersHandler(t *testing.T) {
 			tt.mockSetup()
 
 			// Создаем запрос
-			req := httptest.NewRequest("GET", "/api/user/orders", nil)
+			req := httptest.NewRequest("GET", "/api/user/withdrawals", nil)
 
 			// Добавляем userID в контекст если он есть
 			if tt.userID != "" {
@@ -111,12 +106,10 @@ func TestGetOrdersHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			// Вызываем хендлер
-			h.GetOrders(rr, req)
+			h.Withdrawals(rr, req)
 
 			// Проверяем статус
-			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
-			}
+			assert.Equal(t, tt.expectedStatus, rr.Code)
 
 			// Проверяем тело ответа
 			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
@@ -125,14 +118,14 @@ func TestGetOrdersHandler(t *testing.T) {
 
 			// Проверяем JSON для успешного случая
 			if tt.checkJSON {
-				var orders []models.Order
-				err := json.Unmarshal(rr.Body.Bytes(), &orders)
-				if err != nil {
-					t.Errorf("handler returned invalid JSON: %v", err)
-				}
-				if len(orders) != 2 {
-					t.Errorf("expected 2 orders, got %d", len(orders))
-				}
+				var withdrawals []models.WithdrawBalance
+				err := json.Unmarshal(rr.Body.Bytes(), &withdrawals)
+				assert.NoError(t, err)
+				assert.Len(t, withdrawals, 2)
+				assert.Equal(t, "2377225624", withdrawals[0].Order)
+				assert.Equal(t, 751.50, withdrawals[0].Sum)
+				assert.Equal(t, "49927398716", withdrawals[1].Order)
+				assert.Equal(t, 500.25, withdrawals[1].Sum)
 			}
 		})
 	}

@@ -31,6 +31,8 @@ func TestRouter_MethodValidation(t *testing.T) {
 		{"POST", "/api/user/login"},
 		{"POST", "/api/user/orders"},
 		{"GET", "/api/user/orders"},
+		{"GET", "/api/user/balance"},
+		{"POST", "/api/user/balance/withdraw"},
 	}
 
 	for _, tt := range tests {

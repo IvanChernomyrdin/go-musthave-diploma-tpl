@@ -14,7 +14,9 @@ import (
 
 // Вспомогательная функция для создания PostgresStorage с mock DB
 func newTestStorage(db *sql.DB) *postgres.PostgresStorage {
-	return postgres.NewWithDB(db)
+	storage := postgres.New()
+	storage.DB = db
+	return storage
 }
 
 // удачное создание

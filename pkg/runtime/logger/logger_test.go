@@ -12,10 +12,14 @@ import (
 )
 
 func TestNewHTTPLogger(t *testing.T) {
-	t.Run("Создание логгера с правильной структурой папок", func(t *testing.T) {
-		// удаляем папку если существует
-		logDir := "runtime/log"
+	t.Run("Creating a logger with the correct folder structure", func(t *testing.T) {
+		// Удаляем папку если существует
+		logDir := "pkg/runtime/log"
 		os.RemoveAll(logDir)
+
+		// Создаем родительские директории
+		err := os.MkdirAll("pkg/runtime", 0755)
+		require.NoError(t, err, "Should create parent directory")
 
 		logger := NewHTTPLogger()
 		defer logger.Close()
@@ -24,8 +28,8 @@ func TestNewHTTPLogger(t *testing.T) {
 		assert.NotNil(t, logger.Logger)
 
 		// Проверяем что папка создалась
-		_, err := os.Stat(logDir)
-		assert.NoError(t, err, "Папка логов должна создаваться")
+		_, err = os.Stat(logDir)
+		assert.NoError(t, err, "The logs folder should be created")
 
 		// Делаем запись в лог чтобы файл создался
 		logger.LogRequest("GET", "/test", 200, 100, 1.0)
@@ -36,11 +40,11 @@ func TestNewHTTPLogger(t *testing.T) {
 		// Теперь проверяем что файл лога создался
 		logPath := filepath.Join(logDir, "http.log")
 		_, err = os.Stat(logPath)
-		assert.NoError(t, err, "Файл лога должен создаваться после записи")
+		assert.NoError(t, err, "A log file must be created after recording")
 	})
 
-	t.Run("Создание логгера когда папка уже существует", func(t *testing.T) {
-		logDir := "runtime/log"
+	t.Run("Creating a logger when the folder already exists", func(t *testing.T) {
+		logDir := "pkg/runtime/log"
 		err := os.MkdirAll(logDir, 0755)
 		require.NoError(t, err)
 
@@ -50,7 +54,7 @@ func TestNewHTTPLogger(t *testing.T) {
 		assert.NotNil(t, logger)
 	})
 
-	t.Run("Логгер не паникует при создании", func(t *testing.T) {
+	t.Run("The logger does not panic when creating", func(t *testing.T) {
 		assert.NotPanics(t, func() {
 			logger := NewHTTPLogger()
 			if logger != nil {
@@ -59,7 +63,6 @@ func TestNewHTTPLogger(t *testing.T) {
 		})
 	})
 }
-
 func TestHTTPLogger_LogRequest(t *testing.T) {
 	logger := NewHTTPLogger()
 	defer logger.Close()
@@ -74,7 +77,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 		expectedEmoji string
 	}{
 		{
-			name:          "Успешный запрос 200",
+			name:          "Successful request 200",
 			method:        "GET",
 			uri:           "/api/users",
 			status:        200,
@@ -83,7 +86,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "✅",
 		},
 		{
-			name:          "Успешный запрос 201",
+			name:          "Successful request 201",
 			method:        "POST",
 			uri:           "/api/orders",
 			status:        201,
@@ -92,7 +95,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "✅",
 		},
 		{
-			name:          "Клиентская ошибка 400",
+			name:          "Client error 400",
 			method:        "POST",
 			uri:           "/api/login",
 			status:        400,
@@ -101,7 +104,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "⚠️",
 		},
 		{
-			name:          "Ошибка 404",
+			name:          "Error 404",
 			method:        "GET",
 			uri:           "/api/not-found",
 			status:        404,
@@ -110,7 +113,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "⚠️",
 		},
 		{
-			name:          "Серверная ошибка 500",
+			name:          "Server error 500",
 			method:        "GET",
 			uri:           "/api/internal",
 			status:        500,
@@ -119,7 +122,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "❌",
 		},
 		{
-			name:          "Серверная ошибка 503",
+			name:          "Server error 503",
 			method:        "PUT",
 			uri:           "/api/service",
 			status:        503,
@@ -128,7 +131,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "❌",
 		},
 		{
-			name:          "Информационный статус 100",
+			name:          "Information status 100",
 			method:        "GET",
 			uri:           "/api/info",
 			status:        100,
@@ -137,7 +140,7 @@ func TestHTTPLogger_LogRequest(t *testing.T) {
 			expectedEmoji: "🔵",
 		},
 		{
-			name:          "Редирект 301",
+			name:          "Redirect 301",
 			method:        "GET",
 			uri:           "/api/old",
 			status:        301,
@@ -180,7 +183,7 @@ func TestHTTPLogger_EmojiSelection(t *testing.T) {
 }
 
 func TestHTTPLogger_Close(t *testing.T) {
-	t.Run("Закрытие логгера без ошибок", func(t *testing.T) {
+	t.Run("Close the logger without errors", func(t *testing.T) {
 		logger := NewHTTPLogger()
 
 		assert.NotPanics(t, func() {
@@ -189,7 +192,7 @@ func TestHTTPLogger_Close(t *testing.T) {
 		})
 	})
 
-	t.Run("Многократное закрытие логгера", func(t *testing.T) {
+	t.Run("Multiple logger closures", func(t *testing.T) {
 		logger := NewHTTPLogger()
 
 		err := logger.Close()
@@ -225,7 +228,7 @@ func TestHTTPLogger_ConcurrentLogging(t *testing.T) {
 }
 
 func TestHTTPLogger_FileRotation(t *testing.T) {
-	t.Run("Логгер поддерживает ротацию файлов", func(t *testing.T) {
+	t.Run("The logger supports file rotation.", func(t *testing.T) {
 		logger := NewHTTPLogger()
 		defer logger.Close()
 

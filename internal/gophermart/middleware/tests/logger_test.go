@@ -19,7 +19,7 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name:   "Успешный GET запрос",
+			name:   "Successful GET request",
 			method: "GET",
 			path:   "/test",
 			handler: func(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 			expectedBody:   "OK",
 		},
 		{
-			name:   "Запрос с ошибкой 404",
+			name:   "Request with 404 error",
 			method: "GET",
 			path:   "/not-found",
 			handler: func(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +41,7 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 			expectedBody:   "Not Found",
 		},
 		{
-			name:   "POST запрос с созданием ресурса",
+			name:   "POST request with resource creation",
 			method: "POST",
 			path:   "/api/resource",
 			handler: func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 			expectedBody:   "created",
 		},
 		{
-			name:   "Запрос без явного статуса",
+			name:   "Request without explicit status",
 			method: "GET",
 			path:   "/default",
 			handler: func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,7 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 			expectedBody:   "Default OK",
 		},
 		{
-			name:   "Пустой ответ 204",
+			name:   "Empty response 204",
 			method: "DELETE",
 			path:   "/resource/1",
 			handler: func(w http.ResponseWriter, r *http.Request) {
@@ -86,11 +86,11 @@ func TestLoggerMiddleware_Integration(t *testing.T) {
 
 			// ПРОВЕРКА
 			if rr.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rr.Code)
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
 			}
 
 			if rr.Body.String() != tt.expectedBody {
-				t.Errorf("Expected body '%s', got '%s'", tt.expectedBody, rr.Body.String())
+				t.Errorf("expected body '%s', got '%s'", tt.expectedBody, rr.Body.String())
 			}
 		})
 	}
@@ -114,10 +114,10 @@ func TestLoggerMiddleware_Concurrent(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
-				t.Errorf("Goroutine %d: Expected status 200, got %d", id, rr.Code)
+				t.Errorf("goroutine %d: Expected status 200, got %d", id, rr.Code)
 			}
 			if rr.Body.String() != "OK" {
-				t.Errorf("Goroutine %d: Expected body 'OK', got '%s'", id, rr.Body.String())
+				t.Errorf("goroutine %d: Expected body 'OK', got '%s'", id, rr.Body.String())
 			}
 
 			done <- true
@@ -178,11 +178,11 @@ func TestLoggerMiddleware_WithDelay(t *testing.T) {
 	duration := time.Since(start)
 
 	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", rr.Code)
+		t.Errorf("expected status 200, got %d", rr.Code)
 	}
 
 	if duration < 10*time.Millisecond {
-		t.Errorf("Expected duration > 10ms, got %v", duration)
+		t.Errorf("expected duration > 10ms, got %v", duration)
 	}
 }
 
@@ -204,7 +204,7 @@ func TestLoggerMiddleware_DifferentMethods(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
-				t.Errorf("For method %s: Expected status 200, got %d", method, rr.Code)
+				t.Errorf("for method %s: Expected status 200, got %d", method, rr.Code)
 			}
 		})
 	}
@@ -237,11 +237,11 @@ func TestLoggerMiddleware_ResponseSize(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", rr.Code)
+				t.Errorf("expected status 200, got %d", rr.Code)
 			}
 
 			if len(rr.Body.Bytes()) != tc.expectedSize {
-				t.Errorf("Expected body size %d, got %d", tc.expectedSize, len(rr.Body.Bytes()))
+				t.Errorf("expected body size %d, got %d", tc.expectedSize, len(rr.Body.Bytes()))
 			}
 		})
 	}

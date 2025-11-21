@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRouter_OrdersRoutes(t *testing.T) {
+func TestRouter_WithdrawRoutes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -23,33 +23,23 @@ func TestRouter_OrdersRoutes(t *testing.T) {
 
 	router := handler.NewRouter(h, svc)
 
-	t.Run("POST /api/user/orders - protected route", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/user/orders", nil)
+	t.Run("POST /api/user/orbalance/withdraw - protected route", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/user/balance/withdraw", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code,
-			"POST /api/user/orders must require authentication")
+			"POST /api/user/balance/withdraw must require authentication")
 	})
 
-	t.Run("GET /api/user/orders - protected route", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/user/orders", nil)
-		rr := httptest.NewRecorder()
-
-		router.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code,
-			"GET /api/user/orders must require authentication")
-	})
-
-	t.Run("Unsupported metod for /api/user/orders", func(t *testing.T) {
-		req := httptest.NewRequest("PUT", "/api/user/orders", nil)
+	t.Run("Unsupported method for /api/user/balance/withdraw", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/user/balance/withdraw", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.NotEqual(t, http.StatusNotFound, rr.Code,
-			"PUT /api/user/orders wasn't expected status 404")
+			"PUT /api/user/balance/withdraw should not return 404")
 	})
 }

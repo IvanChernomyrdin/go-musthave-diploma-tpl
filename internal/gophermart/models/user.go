@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type RegisterRequest struct {
 	Login    string `json:"login"`
