@@ -98,7 +98,7 @@ func TestRegisterHandler(t *testing.T) {
 			payload:        "invalid json",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   handler.ErrInvalidJsonFormat.Error(),
+			expectedBody:   handler.ErrInvalidJSONFormat.Error(),
 		},
 	}
 

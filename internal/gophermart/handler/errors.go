@@ -6,7 +6,7 @@ var (
 	ErrLoginAndPasswordRequired = errors.New("login and password are required")
 	ErrInvalidUserID            = errors.New("invalid user ID")
 	ErrInternalServerError      = errors.New("internal server error")
-	ErrInvalidJsonFormat        = errors.New("invalid JSON format")
+	ErrInvalidJSONFormat        = errors.New("invalid JSON format")
 	ErrUserIsNotAuthenticated   = errors.New("user is not authenticated")
 	ErrOrderNumberRequired      = errors.New("order number is required")
 	ErrDuplicateOrder           = errors.New("the number has already been downloaded by this user")
