@@ -143,6 +143,7 @@ func TestRegisterHandler(t *testing.T) {
 			// Для успешной регистрации проверяем куку
 			if tt.expectedStatus == http.StatusOK {
 				cookies := rr.Result().Cookies()
+				defer rr.Result().Body.Close()
 				if len(cookies) == 0 {
 					t.Error("handler should set cookie on successful registration")
 				}

@@ -130,6 +130,7 @@ func TestLoginHandler(t *testing.T) {
 			// Для успешного логина проверяем куку
 			if tt.expectedStatus == http.StatusOK {
 				cookies := rr.Result().Cookies()
+				defer rr.Result().Body.Close()
 				if len(cookies) == 0 {
 					t.Error("handler should set cookie on successful login")
 				}

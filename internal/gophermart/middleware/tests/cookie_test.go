@@ -121,6 +121,7 @@ func TestCookieMiddleware_InvalidEncryption(t *testing.T) {
 
 func TestSetEncryptedCookie(t *testing.T) {
 	rr := httptest.NewRecorder()
+	defer rr.Result().Body.Close()
 
 	middlewareDir.SetEncryptedCookie(rr, "123")
 
