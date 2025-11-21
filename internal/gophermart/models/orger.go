@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"time"
 )
 
@@ -20,12 +19,4 @@ const (
 	OrderStatusProcessing = "PROCESSING"
 	OrderStatusInvalid    = "INVALID"
 	OrderStatusProcessed  = "PROCESSED"
-)
-
-var (
-	ErrDuplicateOrder = errors.New("the number has already been downloaded by this user")
-	ErrOtherUserOrder = errors.New("number uploaded by another user")
-
-	ErrInvalidOrderNumber = errors.New("invalid order number")
-	ErrLackOfFunds        = errors.New("lack of funds")
 )

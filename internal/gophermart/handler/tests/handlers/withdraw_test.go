@@ -54,10 +54,10 @@ func TestWithdrawHandler(t *testing.T) {
 				mockRepo.EXPECT().Withdraw(1, models.WithdrawBalance{
 					Order: "2377225624",
 					Sum:   751,
-				}).Return(models.ErrInvalidOrderNumber)
+				}).Return(handler.ErrInvalidOrderNumber)
 			},
 			expectedStatus: http.StatusUnprocessableEntity,
-			expectedBody:   "invalid order number",
+			expectedBody:   "Invalid order number",
 		},
 		{
 			name:   "Insufficient funds",
@@ -70,10 +70,10 @@ func TestWithdrawHandler(t *testing.T) {
 				mockRepo.EXPECT().Withdraw(1, models.WithdrawBalance{
 					Order: "2377225624",
 					Sum:   751,
-				}).Return(models.ErrLackOfFunds)
+				}).Return(handler.ErrLackOfFunds)
 			},
 			expectedStatus: http.StatusPaymentRequired,
-			expectedBody:   "lack of funds",
+			expectedBody:   "Lack of funds",
 		},
 		{
 			name:   "Internal server error",
@@ -89,7 +89,7 @@ func TestWithdrawHandler(t *testing.T) {
 				}).Return(errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "internal server error",
+			expectedBody:   "Internal server error",
 		},
 		{
 			name:           "User is not authenticated",

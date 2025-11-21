@@ -95,7 +95,7 @@ func TestGofemartService_GetOrders_InvalidUserID(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Nil(t, orders)
-			assert.Equal(t, "invalid user ID", err.Error())
+			assert.Equal(t, "Invalid user ID", err.Error())
 		})
 	}
 }

@@ -136,3 +136,18 @@ func (mr *MockGofemartRepoMockRecorder) Withdraw(userID, withdraw interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Withdraw", reflect.TypeOf((*MockGofemartRepo)(nil).Withdraw), userID, withdraw)
 }
+
+// Withdrawals mocks base method.
+func (m *MockGofemartRepo) Withdrawals(userID int) ([]models.WithdrawBalance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Withdrawals", userID)
+	ret0, _ := ret[0].([]models.WithdrawBalance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Withdrawals indicates an expected call of Withdrawals.
+func (mr *MockGofemartRepoMockRecorder) Withdrawals(userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Withdrawals", reflect.TypeOf((*MockGofemartRepo)(nil).Withdrawals), userID)
+}

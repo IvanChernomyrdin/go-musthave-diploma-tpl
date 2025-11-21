@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	serviceTest "go-musthave-diploma-tpl/internal/gophermart/service"
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
@@ -55,9 +56,9 @@ func TestGofemartService_Withdraw(t *testing.T) {
 						Order: "2377225624",
 						Sum:   751,
 					}).
-					Return(models.ErrInvalidOrderNumber)
+					Return(handler.ErrInvalidOrderNumber)
 			},
-			expectedError: models.ErrInvalidOrderNumber,
+			expectedError: handler.ErrInvalidOrderNumber,
 		},
 		{
 			name:   "Insufficient funds",
@@ -72,9 +73,9 @@ func TestGofemartService_Withdraw(t *testing.T) {
 						Order: "2377225624",
 						Sum:   751,
 					}).
-					Return(models.ErrLackOfFunds)
+					Return(handler.ErrLackOfFunds)
 			},
-			expectedError: models.ErrLackOfFunds,
+			expectedError: handler.ErrLackOfFunds,
 		},
 		{
 			name:   "Database error",

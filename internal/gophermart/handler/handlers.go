@@ -23,14 +23,6 @@ type Handler struct {
 	svc *service.GofemartService
 }
 
-var (
-	ErrInvalidUserID          = errors.New("invalid user ID")
-	ErrInternalServerError    = errors.New("internal server error")
-	ErrInvalidJsonFormat      = errors.New("invalid JSON format")
-	ErrUserIsNotAuthenticated = errors.New("user is not authenticated")
-	ErrOrderNumberRequired    = errors.New("Order number is required")
-)
-
 func NewHandler(svc *service.GofemartService) *Handler {
 	return &Handler{svc: svc}
 }
@@ -54,15 +46,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
+		http.Error(w, ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.RegisterUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case models.ErrLoginAndPasswordRequired.Error():
-			http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
+		case ErrLoginAndPasswordRequired.Error():
+			http.Error(w, ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		case "login already exists":
 			http.Error(w, "Login already taken", http.StatusConflict)
 		default:
@@ -104,14 +96,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, models.ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
+		http.Error(w, ErrLoginAndPasswordRequired.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.LoginUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case "invalid login or password":
+		case "Invalid login or password":
 			http.Error(w, err.Error(), http.StatusUnauthorized) // 401!
 		default:
 			castomLogger.Infof("Error logging in user: %v\n", err)
@@ -159,12 +151,12 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	// проверяем что в строке все цифры
 	if !pgk.ContainsOnlyDigits(number) {
-		http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 	// прогоняем по алгоритму лунтика(luhn)
 	if !pgk.ValidateLuhn(number) {
-		http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -178,10 +170,10 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	err = h.svc.CreateOrder(userIDint, number)
 	if err != nil {
 		switch {
-		case errors.Is(err, models.ErrDuplicateOrder): //200 если уже был загружен
+		case errors.Is(err, ErrDuplicateOrder): //200 если уже был загружен
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(err.Error()))
-		case errors.Is(err, models.ErrOtherUserOrder): //409 если другой пользователь уже загрузил
+		case errors.Is(err, ErrOtherUserOrder): //409 если другой пользователь уже загрузил
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(err.Error()))
 		default:
@@ -277,11 +269,11 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !pgk.ContainsOnlyDigits(number) {
-		http.Error(w, models.ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 	if !pgk.ValidateLuhn(number) {
-		http.Error(w, models.ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
+		http.Error(w, ErrInvalidNumberFormat.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -293,10 +285,10 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	err = h.svc.Withdraw(userIDint, withdraw)
 	if err != nil {
 		switch err {
-		case models.ErrInvalidOrderNumber:
-			http.Error(w, models.ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
-		case models.ErrLackOfFunds:
-			http.Error(w, models.ErrLackOfFunds.Error(), http.StatusPaymentRequired)
+		case ErrInvalidOrderNumber:
+			http.Error(w, ErrInvalidOrderNumber.Error(), http.StatusUnprocessableEntity)
+		case ErrLackOfFunds:
+			http.Error(w, ErrLackOfFunds.Error(), http.StatusPaymentRequired)
 		default:
 			http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
 		}
@@ -305,4 +297,31 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Withdrawal successful"))
+}
+
+func (h *Handler) Withdrawals(w http.ResponseWriter, r *http.Request) {
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
+		return
+	}
+	userIDint, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, ErrInvalidUserID.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	withdrawals, err := h.svc.Withdrawals(userIDint)
+	if err != nil {
+		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(withdrawals)
 }

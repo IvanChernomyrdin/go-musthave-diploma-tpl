@@ -7,6 +7,8 @@ import (
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	"go-musthave-diploma-tpl/internal/gophermart/repository/postgres"
 
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,7 +74,7 @@ func TestPostgresStorage_Withdraw(t *testing.T) {
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 				mock.ExpectRollback()
 			},
-			expectedError: models.ErrInvalidOrderNumber,
+			expectedError: handler.ErrInvalidOrderNumber,
 		},
 		{
 			name:   "Insufficient funds",
@@ -91,7 +93,7 @@ func TestPostgresStorage_Withdraw(t *testing.T) {
 					WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(500.0))
 				mock.ExpectRollback()
 			},
-			expectedError: models.ErrLackOfFunds,
+			expectedError: handler.ErrLackOfFunds,
 		},
 		{
 			name:   "Database error when checking order existence",
@@ -171,7 +173,7 @@ func TestPostgresStorage_Withdraw(t *testing.T) {
 
 			if tt.expectedError != nil {
 				assert.Error(t, err)
-				if tt.expectedError == models.ErrInvalidOrderNumber || tt.expectedError == models.ErrLackOfFunds {
+				if tt.expectedError == handler.ErrInvalidOrderNumber || tt.expectedError == handler.ErrLackOfFunds {
 					assert.Equal(t, tt.expectedError, err)
 				} else {
 					assert.ErrorContains(t, err, tt.expectedError.Error())

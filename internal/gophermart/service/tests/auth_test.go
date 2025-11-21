@@ -131,7 +131,7 @@ func TestGofemartService_LoginUser_InvalidCredentials(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, user)
-	assert.Equal(t, "invalid login or password", err.Error())
+	assert.Equal(t, "Invalid login or password", err.Error())
 }
 
 func TestGofemartService_LoginUser_EmptyCredentials(t *testing.T) {

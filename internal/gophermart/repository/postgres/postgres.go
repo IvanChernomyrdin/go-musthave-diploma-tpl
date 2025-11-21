@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 )
@@ -160,9 +161,9 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
 	case "inserted":
 		return nil
 	case "duplicate":
-		return models.ErrDuplicateOrder
+		return handler.ErrDuplicateOrder
 	case "conflict":
-		return models.ErrOtherUserOrder
+		return handler.ErrOtherUserOrder
 	case "not_found":
 		return fmt.Errorf("order not found after conflict")
 	default:
@@ -234,7 +235,7 @@ func (ps *PostgresStorage) Withdraw(userID int, withdraw models.WithdrawBalance)
 		return err
 	}
 	if !exists {
-		return models.ErrInvalidOrderNumber
+		return handler.ErrInvalidOrderNumber
 	}
 	// получаем баланс пользователя
 	var balance float64
@@ -250,7 +251,7 @@ func (ps *PostgresStorage) Withdraw(userID int, withdraw models.WithdrawBalance)
 	}
 	// проверяем хватает ли баллов
 	if balance-withdraw.Sum < 0 {
-		return models.ErrLackOfFunds
+		return handler.ErrLackOfFunds
 	}
 
 	// если хватает записываем новое списание
@@ -268,4 +269,34 @@ func (ps *PostgresStorage) Withdraw(userID int, withdraw models.WithdrawBalance)
 	}
 
 	return nil
+}
+
+func (ps *PostgresStorage) Withdrawals(userID int) ([]models.WithdrawBalance, error) {
+	rows, err := ps.DB.Query(`	SELECT 
+									order_number,
+									sum,
+									processed_at
+								FROM withdrawals
+								WHERE user_id = $1
+								ORDER BY processed_at DESC
+							`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var withdrawals []models.WithdrawBalance
+	for rows.Next() {
+		var w models.WithdrawBalance
+		if err := rows.Scan(&w.Order, &w.Sum, &w.ProcessedAt); err != nil {
+			return nil, err
+		}
+		withdrawals = append(withdrawals, w)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return withdrawals, nil
 }

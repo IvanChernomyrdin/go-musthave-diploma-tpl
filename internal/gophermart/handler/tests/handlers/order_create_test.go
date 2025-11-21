@@ -10,7 +10,6 @@ import (
 
 	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/middleware"
-	"go-musthave-diploma-tpl/internal/gophermart/models"
 	"go-musthave-diploma-tpl/internal/gophermart/service"
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
 
@@ -98,10 +97,10 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:        "12345678903",
 			mockSetup: func() {
 				mockRepo.EXPECT().CreateOrder(1, "12345678903").
-					Return(models.ErrDuplicateOrder)
+					Return(handler.ErrDuplicateOrder)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   models.ErrDuplicateOrder.Error(),
+			expectedBody:   handler.ErrDuplicateOrder.Error(),
 		},
 		{
 			name:        "Order already uploaded by another user",
@@ -110,10 +109,10 @@ func TestCreateOrderHandler(t *testing.T) {
 			body:        "12345678903",
 			mockSetup: func() {
 				mockRepo.EXPECT().CreateOrder(1, "12345678903").
-					Return(models.ErrOtherUserOrder)
+					Return(handler.ErrOtherUserOrder)
 			},
 			expectedStatus: http.StatusConflict,
-			expectedBody:   models.ErrOtherUserOrder.Error(),
+			expectedBody:   handler.ErrOtherUserOrder.Error(),
 		},
 		{
 			name:        "Database error",

@@ -1,6 +1,8 @@
 package models
 
-import "errors"
+import (
+	"time"
+)
 
 type Balance struct {
 	Current   float64 `json:"current" db:"current"`
@@ -8,10 +10,7 @@ type Balance struct {
 }
 
 type WithdrawBalance struct {
-	Order string  `json:"order" db:"order_number"`
-	Sum   float64 `json:"sum" db:"sum"`
+	Order       string    `json:"order" db:"order_number"`
+	Sum         float64   `json:"sum" db:"sum"`
+	ProcessedAt time.Time `json:"processed_at" db:"processed_at"`
 }
-
-var (
-	ErrInvalidNumberFormat = errors.New("Invalid number format")
-)

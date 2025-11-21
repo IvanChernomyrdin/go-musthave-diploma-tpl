@@ -38,7 +38,7 @@ func NewRouter(h *Handler, svc *service.GofemartService) http.Handler {
 				r.Post("/withdraw", h.Withdraw)
 			})
 			// получение информации о выводе средств с накопительного счёта пользователем
-			// r.Get("/withdrawals", h.Withdrawals)
+			r.Get("/withdrawals", h.Withdrawals)
 		})
 	})
 	return r
