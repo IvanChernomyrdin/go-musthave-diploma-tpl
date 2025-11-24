@@ -18,7 +18,7 @@ func TestRouter_Routes(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	router := handler.NewRouter(h, svc)
@@ -86,7 +86,7 @@ func TestRouter_RouteStructure(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	router := handler.NewRouter(h, svc)

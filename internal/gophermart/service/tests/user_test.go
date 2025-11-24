@@ -18,7 +18,7 @@ func TestGofemartService_GetUserByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	expectedUser := &models.User{
@@ -43,7 +43,7 @@ func TestGofemartService_GetUserByID_InvalidID(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name   string
@@ -69,7 +69,7 @@ func TestGofemartService_GetUserByID_NotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 999
 
@@ -88,7 +88,7 @@ func TestGofemartService_GetUserByID_DatabaseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 

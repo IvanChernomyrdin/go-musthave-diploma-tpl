@@ -19,7 +19,7 @@ func TestCookieMiddleware_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	gofemartService := service.NewGofemartService(mockRepo)
+	gofemartService := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	mockRepo.EXPECT().
 		GetUserByID(123).
@@ -51,7 +51,7 @@ func TestCookieMiddleware_UserNotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	gofemartService := service.NewGofemartService(mockRepo)
+	gofemartService := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	mockRepo.EXPECT().
 		GetUserByID(999).
@@ -79,7 +79,7 @@ func TestCookieMiddleware_NoCookie(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	gofemartService := service.NewGofemartService(mockRepo)
+	gofemartService := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +101,7 @@ func TestCookieMiddleware_InvalidEncryption(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	gofemartService := service.NewGofemartService(mockRepo)
+	gofemartService := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	middleware := middlewareDir.AccessCookieMiddleware(gofemartService)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

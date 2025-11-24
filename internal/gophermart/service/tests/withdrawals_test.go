@@ -18,7 +18,7 @@ func TestGofemartService_Withdrawals(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	// Фиксированное время для тестов
 	now := time.Now()
@@ -153,7 +153,7 @@ func TestGofemartService_Withdrawals_RepositoryCalledCorrectly(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	t.Run("Repository method called with correct parameters", func(t *testing.T) {
 		userID := 123

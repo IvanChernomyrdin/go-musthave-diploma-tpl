@@ -2,6 +2,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 )
@@ -28,16 +29,20 @@ type GofemartRepo interface {
 
 // GofemartService - сервис с бизнес-логикой
 type GofemartService struct {
-	repo GofemartRepo
+	repo             GofemartRepo
+	accrualSystemURL string
 }
 
-func NewGofemartService(repo GofemartRepo) *GofemartService {
-	return &GofemartService{repo: repo}
+func NewGofemartService(repo GofemartRepo, accrualURL string) *GofemartService {
+	return &GofemartService{
+		repo:             repo,
+		accrualSystemURL: accrualURL,
+	}
 }
 
 func (s *GofemartService) RegisterUser(login, password string) (*models.User, error) {
 	if login == "" || password == "" {
-		return nil, fmt.Errorf("login and password are required")
+		return nil, errors.New("login and password are required")
 	}
 
 	user, err := s.repo.CreateUser(login, password)

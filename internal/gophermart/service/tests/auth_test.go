@@ -18,7 +18,7 @@ func TestGofemartService_RegisterUser_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	// подготовка
 	login, password := "newuser", "password123"
@@ -47,7 +47,7 @@ func TestGofemartService_RegisterUser_EmptyCredentials(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name     string
@@ -75,7 +75,7 @@ func TestGofemartService_RegisterUser_LoginExists(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	login, password := "existinguser", "password123"
 
@@ -95,7 +95,7 @@ func TestGofemartService_LoginUser_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	login, password := "testuser", "correctpassword"
 	expectedUser := &models.User{
@@ -120,7 +120,7 @@ func TestGofemartService_LoginUser_InvalidCredentials(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	login, password := "testuser", "wrongpassword"
 
@@ -140,7 +140,7 @@ func TestGofemartService_LoginUser_EmptyCredentials(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name     string
@@ -168,7 +168,7 @@ func TestGofemartService_LoginUser_DatabaseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	login, password := "testuser", "password123"
 

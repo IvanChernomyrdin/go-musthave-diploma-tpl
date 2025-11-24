@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	db "go-musthave-diploma-tpl/internal/gophermart/config/db"
 	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
@@ -98,23 +99,21 @@ func (ps *PostgresStorage) GetUserByLoginAndPassword(login, password string) (*m
 }
 
 func (ps *PostgresStorage) CreateUser(login, password string) (*models.User, error) {
-	// проверяем что такого логина нет (используем GetUserByLogin)
 	existingUser, err := ps.GetUserByLogin(login)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check user existence: %w", err)
 	}
 
 	if existingUser != nil {
-		return nil, fmt.Errorf("login already exists")
+		return nil, errors.New("login already exists")
 	}
 
 	hashedPassword := HashPassword(password)
 
 	var user models.User
-	// добавляем
 	query := `INSERT INTO users (login, password_hash) 
-        	  VALUES ($1, $2) 
-        	  RETURNING id, login, password_hash, created_at`
+              VALUES ($1, $2) 
+              RETURNING id, login, password_hash, created_at`
 
 	err = ps.DB.QueryRow(query, login, hashedPassword).Scan(
 		&user.ID,
@@ -137,7 +136,7 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2
@@ -151,21 +150,18 @@ func (ps *PostgresStorage) CreateOrder(userID int, orderNumber string) error {
             END as result`
 
 	var result string
-	err := ps.DB.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result)
-
-	if err != nil {
+	if err := ps.DB.QueryRow(query, userID, orderNumber, models.OrderStatusNew).Scan(&result); err != nil {
 		return fmt.Errorf("failed to create order: %w", err)
 	}
 
 	switch result {
 	case "inserted":
+		// триггер сам отправит notify
 		return nil
 	case "duplicate":
 		return handler.ErrDuplicateOrder
 	case "conflict":
 		return handler.ErrOtherUserOrder
-	case "not_found":
-		return fmt.Errorf("order not found after conflict")
 	default:
 		return fmt.Errorf("unexpected result: %s", result)
 	}
@@ -217,58 +213,45 @@ func (ps *PostgresStorage) GetBalance(userID int) (models.Balance, error) {
 }
 
 func (ps *PostgresStorage) Withdraw(userID int, withdraw models.WithdrawBalance) error {
-	// работаем через транзакцию
 	tx, err := ps.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// проверяем что заказ  есть по номеру
-	var exists bool
-	err = tx.QueryRow(`SELECT EXISTS(
-									SELECT 1 
-									FROM orders 
-									WHERE number = $1)
-						`, withdraw.Order).Scan(&exists)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return handler.ErrInvalidOrderNumber
-	}
-	// получаем баланс пользователя
+	// считаем баланс как в GetBalance
 	var balance float64
-	err = tx.QueryRow(`SELECT 
-        					COALESCE((
-            					SELECT SUM(accrual) FROM orders WHERE user_id = $1
-        					), 0) - 
-        					COALESCE((
-            					SELECT SUM(sum) FROM withdrawals WHERE user_id = $1
-        					), 0) AS balance`, userID).Scan(&balance)
+	err = tx.QueryRow(`
+        SELECT 
+            COALESCE((
+                SELECT SUM(accrual) 
+                FROM orders 
+                WHERE user_id = $1 AND status = 'PROCESSED'
+            ), 0) 
+            - COALESCE((
+                SELECT SUM(sum) 
+                FROM withdrawals 
+                WHERE user_id = $1
+            ), 0) AS balance
+    `, userID).Scan(&balance)
 	if err != nil {
 		return err
 	}
-	// проверяем хватает ли баллов
+
 	if balance-withdraw.Sum < 0 {
 		return handler.ErrLackOfFunds
 	}
 
-	// если хватает записываем новое списание
-	_, err = tx.Exec(`INSERT INTO withdrawals
-							(user_id, order_number, sum)
-						VALUES
-							($1, $2, $3)`, userID, withdraw.Order, withdraw.Sum)
+	// просто пишем факт списания, без проверки, что заказ существует в orders
+	_, err = tx.Exec(`
+        INSERT INTO withdrawals (user_id, order_number, sum)
+        VALUES ($1, $2, $3)
+    `, userID, withdraw.Order, withdraw.Sum)
 	if err != nil {
 		return err
 	}
 
-	// коммитим
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (ps *PostgresStorage) Withdrawals(userID int) ([]models.WithdrawBalance, error) {
