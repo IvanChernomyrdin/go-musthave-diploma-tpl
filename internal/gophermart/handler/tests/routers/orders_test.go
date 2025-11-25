@@ -18,38 +18,38 @@ func TestRouter_OrdersRoutes(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	router := handler.NewRouter(h, svc)
 
-	t.Run("POST /api/user/orders - защищенный маршрут", func(t *testing.T) {
+	t.Run("POST /api/user/orders - protected route", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/user/orders", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code,
-			"POST /api/user/orders должен требовать аутентификации")
+			"POST /api/user/orders must require authentication")
 	})
 
-	t.Run("GET /api/user/orders - защищенный маршрут", func(t *testing.T) {
+	t.Run("GET /api/user/orders - protected route", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/user/orders", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code,
-			"GET /api/user/orders должен требовать аутентификации")
+			"GET /api/user/orders must require authentication")
 	})
 
-	t.Run("Неподдерживаемый метод для /api/user/orders", func(t *testing.T) {
+	t.Run("Unsupported metod for /api/user/orders", func(t *testing.T) {
 		req := httptest.NewRequest("PUT", "/api/user/orders", nil)
 		rr := httptest.NewRecorder()
 
 		router.ServeHTTP(rr, req)
 
 		assert.NotEqual(t, http.StatusNotFound, rr.Code,
-			"PUT /api/user/orders не должен возвращать 404")
+			"PUT /api/user/orders wasn't expected status 404")
 	})
 }

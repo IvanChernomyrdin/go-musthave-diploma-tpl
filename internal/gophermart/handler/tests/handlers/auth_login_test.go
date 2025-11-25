@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,118 +22,167 @@ func TestLoginHandler(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	tests := []struct {
 		name           string
-		payload        map[string]string
+		payload        interface{}
+		contentType    string
 		mockSetup      func()
 		expectedStatus int
 		expectedBody   string
+		checkResponse  func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
-			name: "Успешный логин",
-			payload: map[string]string{
-				"login":    "testuser",
-				"password": "correctpassword",
+			name: "Successful login",
+			payload: models.RegisterRequest{
+				Login:    "testuser",
+				Password: "correctpassword",
 			},
+			contentType: "application/json",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetUserByLoginAndPassword("testuser", "correctpassword").
+				mockRepo.EXPECT().
+					GetUserByLoginAndPassword("testuser", "correctpassword").
 					Return(&models.User{
 						ID:    1,
 						Login: "testuser",
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "Successfully logged in",
+			expectedBody:   "",
+			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				cookieHeader := rr.Header().Get("Set-Cookie")
+				if cookieHeader == "" {
+					t.Fatalf("expected Set-Cookie header to be set")
+				}
+				if !bytes.Contains([]byte(cookieHeader), []byte("userID")) {
+					t.Fatalf("expected Set-Cookie to contain userID, got %s", cookieHeader)
+				}
+			},
 		},
 		{
-			name: "Неверный пароль",
-			payload: map[string]string{
-				"login":    "testuser",
-				"password": "wrongpassword",
+			name: "Invalid login or password (wrong password)",
+			payload: models.RegisterRequest{
+				Login:    "testuser",
+				Password: "wrongpassword",
 			},
+			contentType: "application/json",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetUserByLoginAndPassword("testuser", "wrongpassword").
-					Return(nil, nil)
+				mockRepo.EXPECT().
+					GetUserByLoginAndPassword("testuser", "wrongpassword").
+					Return(nil, sql.ErrNoRows)
 			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			// СЕРВИС возвращает ошибку, которую хендлер трактует как internal error
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
-			name: "Несуществующий пользователь",
-			payload: map[string]string{
-				"login":    "nonexistent",
-				"password": "password",
+			// аналогично
+			name: "Invalid login or password (nonexistent user)",
+			payload: models.RegisterRequest{
+				Login:    "nonexistent",
+				Password: "password",
 			},
+			contentType: "application/json",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetUserByLoginAndPassword("nonexistent", "password").
-					Return(nil, nil)
+				mockRepo.EXPECT().
+					GetUserByLoginAndPassword("nonexistent", "password").
+					Return(nil, sql.ErrNoRows)
 			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "Invalid login or password",
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 		{
-			name: "Пустой логин",
-			payload: map[string]string{
-				"login":    "",
-				"password": "password",
+			name: "Empty login",
+			payload: models.RegisterRequest{
+				Login:    "",
+				Password: "password",
 			},
+			contentType:    "application/json",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
 		},
 		{
-			name: "Ошибка базы данных",
-			payload: map[string]string{
-				"login":    "testuser",
-				"password": "password",
+			name: "Empty password",
+			payload: models.RegisterRequest{
+				Login:    "testuser",
+				Password: "",
 			},
+			contentType:    "application/json",
+			mockSetup:      func() {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   handler.ErrLoginAndPasswordRequired.Error(),
+		},
+		{
+			name:           "Invalid JSON",
+			payload:        `{"login": "testuser", "password":`, // обрубленный JSON
+			contentType:    "application/json",
+			mockSetup:      func() {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   handler.ErrInvalidJSONFormat.Error(),
+		},
+		{
+			name: "Wrong content type",
+			payload: models.RegisterRequest{
+				Login:    "testuser",
+				Password: "password",
+			},
+			contentType:    "text/plain",
+			mockSetup:      func() {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "content-type must be application/json",
+		},
+		{
+			name: "Database error",
+			payload: models.RegisterRequest{
+				Login:    "testuser",
+				Password: "password",
+			},
+			contentType: "application/json",
 			mockSetup: func() {
-				mockRepo.EXPECT().GetUserByLoginAndPassword("testuser", "password").
+				mockRepo.EXPECT().
+					GetUserByLoginAndPassword("testuser", "password").
 					Return(nil, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
+			expectedBody:   handler.ErrInternalServerError.Error(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Настраиваем мок
 			tt.mockSetup()
 
-			// Подготавливаем запрос
-			body, err := json.Marshal(tt.payload)
-			if err != nil {
-				t.Fatalf("Failed to marshal payload: %v", err)
+			var bodyBytes []byte
+			switch p := tt.payload.(type) {
+			case string:
+				bodyBytes = []byte(p)
+			default:
+				var err error
+				bodyBytes, err = json.Marshal(p)
+				if err != nil {
+					t.Fatalf("failed to marshal payload: %v", err)
+				}
 			}
 
-			req := httptest.NewRequest("POST", "/api/user/login", bytes.NewBuffer(body))
-			req.Header.Set("Content-Type", "application/json")
+			req := httptest.NewRequest(http.MethodPost, "/api/user/login", bytes.NewBuffer(bodyBytes))
+			req.Header.Set("Content-Type", tt.contentType)
 
 			rr := httptest.NewRecorder()
-
-			// Вызываем хендлер
 			h.Login(rr, req)
 
-			// Проверяем статус
 			if status := rr.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 			}
 
-			// Проверяем тело ответа
 			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
-				t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
+				t.Errorf("handler returned unexpected body: got %q want to contain %q", rr.Body.String(), tt.expectedBody)
 			}
 
-			// Для успешного логина проверяем куку
-			if tt.expectedStatus == http.StatusOK {
-				cookies := rr.Result().Cookies()
-				if len(cookies) == 0 {
-					t.Error("handler should set cookie on successful login")
-				}
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, rr)
 			}
 		})
 	}

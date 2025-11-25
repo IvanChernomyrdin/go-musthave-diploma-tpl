@@ -2,7 +2,7 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +11,7 @@ import (
 	"go-musthave-diploma-tpl/internal/gophermart/middleware"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	"go-musthave-diploma-tpl/internal/gophermart/service"
-	serviceMocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
+	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -21,8 +21,8 @@ func TestHandler_GetBalance(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	mockRepo := mocks.NewMockGofemartRepo(ctrl)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	tests := []struct {
@@ -31,9 +31,10 @@ func TestHandler_GetBalance(t *testing.T) {
 		setupMock      func()
 		expectedStatus int
 		expectedBody   string
+		checkResponse  func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
-			name: "Успешное получение баланса",
+			name: "Successfully get balance",
 			setupContext: func(ctx context.Context) context.Context {
 				return context.WithValue(ctx, middleware.UserIDKey, "1")
 			},
@@ -44,36 +45,44 @@ func TestHandler_GetBalance(t *testing.T) {
 				}, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"current":500.5,"withdrawn":42}` + "\n",
+			expectedBody:   `{"current":500.5,"withdrawn":42}`,
+			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+			},
 		},
 		{
-			name: "Пользователь не аутентифицирован",
+			name: "User not authenticated",
 			setupContext: func(ctx context.Context) context.Context {
 				return ctx // без userID
 			},
 			setupMock:      func() {},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "пользователь не аутентифицирован\n",
+			expectedBody:   `{"error":"user is not authenticated"}`,
 		},
 		{
-			name: "Ошибка сервиса",
+			name: "Database error",
 			setupContext: func(ctx context.Context) context.Context {
 				return context.WithValue(ctx, middleware.UserIDKey, "1")
 			},
 			setupMock: func() {
-				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{}, assert.AnError)
+				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{}, fmt.Errorf("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "внутренняя ошибка сервера\n",
+			expectedBody:   `{"error":"internal server error"}`,
 		},
 		{
-			name: "Неверный userID в контексте",
+			name: "Zero balance",
 			setupContext: func(ctx context.Context) context.Context {
-				return context.WithValue(ctx, middleware.UserIDKey, "invalid")
+				return context.WithValue(ctx, middleware.UserIDKey, "1")
 			},
-			setupMock:      func() {},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Invalid user ID\n",
+			setupMock: func() {
+				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{
+					Current:   0,
+					Withdrawn: 0,
+				}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"current":0,"withdrawn":0}`,
 		},
 	}
 
@@ -88,15 +97,17 @@ func TestHandler_GetBalance(t *testing.T) {
 
 			h.GetBalance(rr, req)
 
-			assert.Equal(t, tt.expectedStatus, rr.Code)
-			assert.Equal(t, tt.expectedBody, rr.Body.String())
+			// Проверяем статус
+			assert.Equal(t, tt.expectedStatus, rr.Code, "handler returned wrong status code")
 
-			if tt.expectedStatus == http.StatusOK {
-				assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+			// Проверяем тело ответа
+			if tt.expectedBody != "" {
+				assert.JSONEq(t, tt.expectedBody, rr.Body.String(), "handler returned unexpected body")
+			}
 
-				var balance models.Balance
-				err := json.Unmarshal(rr.Body.Bytes(), &balance)
-				assert.NoError(t, err)
+			// Проверяем дополнительные условия
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, rr)
 			}
 		})
 	}

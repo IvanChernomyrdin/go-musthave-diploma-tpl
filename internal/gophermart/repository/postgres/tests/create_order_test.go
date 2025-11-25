@@ -9,6 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 )
 
@@ -57,7 +58,7 @@ func TestPostgresStorage_CreateOrder_Success(t *testing.T) {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2
@@ -96,7 +97,7 @@ func TestPostgresStorage_CreateOrder_Duplicate(t *testing.T) {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2
@@ -114,7 +115,7 @@ func TestPostgresStorage_CreateOrder_Duplicate(t *testing.T) {
 	err = storage.CreateOrder(userID, orderNumber)
 
 	assert.Error(t, err)
-	assert.Equal(t, models.ErrDuplicateOrder, err)
+	assert.Equal(t, handler.ErrDuplicateOrder, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -136,7 +137,7 @@ func TestPostgresStorage_CreateOrder_Conflict(t *testing.T) {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2
@@ -154,7 +155,7 @@ func TestPostgresStorage_CreateOrder_Conflict(t *testing.T) {
 	err = storage.CreateOrder(userID, orderNumber)
 
 	assert.Error(t, err)
-	assert.Equal(t, models.ErrOtherUserOrder, err)
+	assert.Equal(t, handler.ErrOtherUserOrder, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -176,7 +177,7 @@ func TestPostgresStorage_CreateOrder_DatabaseError(t *testing.T) {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2
@@ -216,7 +217,7 @@ func TestPostgresStorage_CreateOrder_UnexpectedResult(t *testing.T) {
             INSERT INTO orders (user_id, number, status) 
             VALUES ($1, $2, $3)
             ON CONFLICT (number) DO NOTHING
-            RETURNING user_id
+            RETURNING uid
         ),
         existing AS (
             SELECT user_id FROM orders WHERE number = $2

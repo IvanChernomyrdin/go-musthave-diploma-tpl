@@ -136,8 +136,7 @@ func TestPostgresErrorClassifier_ClassifyPostgresError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Используем reflection для тестирования приватного метода
-			// или тестируем через публичный Classify
+			// тестируем через публичный Classify
 			result := classifier.Classify(tt.pgErr)
 			assert.Equal(t, tt.expected, result)
 		})

@@ -1,6 +1,0 @@
-CREATE TABLE IF NOT EXISTS products (
-    id SERIAL PRIMARY KEY,
-    match VARCHAR(255) NOT NULL UNIQUE,
-    reward FLOAT NOT NULL
-    reward_type VARCHAR(2) NOT NULL
-);

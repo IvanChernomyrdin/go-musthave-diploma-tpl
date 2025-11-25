@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type RegisterRequest struct {
 	Login    string `json:"login"`
@@ -11,5 +13,5 @@ type User struct {
 	ID           int       `json:"id" db:"id"`
 	Login        string    `json:"login" db:"login"`
 	PasswordHash string    `json:"-" db:"password_hash"`
-	CreatedAt    time.Time `json:"-" db:"created_at    "`
+	CreatedAt    time.Time `json:"-" db:"created_at"`
 }

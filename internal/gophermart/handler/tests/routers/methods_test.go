@@ -18,7 +18,7 @@ func TestRouter_MethodValidation(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	router := handler.NewRouter(h, svc)
@@ -31,6 +31,8 @@ func TestRouter_MethodValidation(t *testing.T) {
 		{"POST", "/api/user/login"},
 		{"POST", "/api/user/orders"},
 		{"GET", "/api/user/orders"},
+		{"GET", "/api/user/balance"},
+		{"POST", "/api/user/balance/withdraw"},
 	}
 
 	for _, tt := range tests {

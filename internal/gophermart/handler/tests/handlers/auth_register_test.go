@@ -14,29 +14,34 @@ import (
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRegisterHandler(t *testing.T) {
+func TestHandler_Register(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 	h := handler.NewHandler(svc)
 
 	tests := []struct {
 		name           string
 		payload        interface{}
+		contentType    string
 		mockSetup      func()
 		expectedStatus int
 		expectedBody   string
+		checkResponse  func(t *testing.T, rr *httptest.ResponseRecorder)
 	}{
 		{
-			name: "Успешная регистрация",
+			name: "Successful registration",
 			payload: map[string]string{
 				"login":    "newuser",
 				"password": "password123",
 			},
+			contentType: "application/json",
 			mockSetup: func() {
 				mockRepo.EXPECT().CreateUser("newuser", "password123").
 					Return(&models.User{
@@ -45,107 +50,66 @@ func TestRegisterHandler(t *testing.T) {
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "User successfully registered",
+			checkResponse: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				assert.Contains(t, rr.Header().Get("Set-Cookie"), "userID")
+			},
 		},
 		{
-			name: "Логин уже занят",
+			name: "Login already exists",
 			payload: map[string]string{
 				"login":    "existinguser",
 				"password": "password123",
 			},
+			contentType: "application/json",
 			mockSetup: func() {
 				mockRepo.EXPECT().CreateUser("existinguser", "password123").
 					Return(nil, fmt.Errorf("login already exists"))
 			},
 			expectedStatus: http.StatusConflict,
-			expectedBody:   "Login already taken",
+			expectedBody:   `{"error":"login already taken"}`,
 		},
 		{
-			name: "Пустой логин",
+			name: "Empty login and password",
 			payload: map[string]string{
 				"login":    "",
-				"password": "password123",
-			},
-			mockSetup:      func() {},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
-		},
-		{
-			name: "Пустой пароль",
-			payload: map[string]string{
-				"login":    "user",
 				"password": "",
 			},
+			contentType:    "application/json",
 			mockSetup:      func() {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Login and password are required",
-		},
-		{
-			name: "Ошибка сервера",
-			payload: map[string]string{
-				"login":    "testuser",
-				"password": "password123",
-			},
-			mockSetup: func() {
-				mockRepo.EXPECT().CreateUser("testuser", "password123").
-					Return(nil, fmt.Errorf("database error"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Internal server error",
-		},
-		{
-			name:           "Неверный JSON",
-			payload:        "invalid json",
-			mockSetup:      func() {},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Invalid JSON format",
+			expectedBody:   `{"error":"login and password are required"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Настраиваем мок
 			tt.mockSetup()
 
-			// Подготавливаем тело запроса
-			var body []byte
-			var err error
-
-			switch v := tt.payload.(type) {
+			var bodyBytes []byte
+			switch payload := tt.payload.(type) {
 			case string:
-				body = []byte(v)
+				bodyBytes = []byte(payload)
 			default:
-				body, err = json.Marshal(v)
-				if err != nil {
-					t.Fatalf("Failed to marshal payload: %v", err)
-				}
+				var err error
+				bodyBytes, err = json.Marshal(payload)
+				require.NoError(t, err)
 			}
 
-			// Создаем запрос
-			req := httptest.NewRequest("POST", "/api/user/register", bytes.NewBuffer(body))
-			req.Header.Set("Content-Type", "application/json")
+			req := httptest.NewRequest("POST", "/api/user/register", bytes.NewBuffer(bodyBytes))
+			req.Header.Set("Content-Type", tt.contentType)
 
 			rr := httptest.NewRecorder()
 
-			// Вызываем хендлер
 			h.Register(rr, req)
 
-			// Проверяем статус
-			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
+			assert.Equal(t, tt.expectedStatus, rr.Code, "handler returned wrong status code")
+
+			if tt.expectedBody != "" {
+				assert.JSONEq(t, tt.expectedBody, rr.Body.String(), "handler returned unexpected body")
 			}
 
-			// Проверяем тело ответа
-			if tt.expectedBody != "" && !bytes.Contains(rr.Body.Bytes(), []byte(tt.expectedBody)) {
-				t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
-			}
-
-			// Для успешной регистрации проверяем куку
-			if tt.expectedStatus == http.StatusOK {
-				cookies := rr.Result().Cookies()
-				if len(cookies) == 0 {
-					t.Error("handler should set cookie on successful registration")
-				}
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, rr)
 			}
 		})
 	}

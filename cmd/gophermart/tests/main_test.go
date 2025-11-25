@@ -19,13 +19,13 @@ import (
 func TestServiceInitialization(t *testing.T) {
 	t.Run("Создание сервиса с репозиторием", func(t *testing.T) {
 		repo := postgres.New()
-		svc := service.NewGofemartService(repo)
+		svc := service.NewGofemartService(repo, "http://localhost:8081")
 		assert.NotNil(t, svc)
 	})
 
 	t.Run("Создание handler с сервисом", func(t *testing.T) {
 		repo := postgres.New()
-		svc := service.NewGofemartService(repo)
+		svc := service.NewGofemartService(repo, "http://localhost:8081")
 		h := handler.NewHandler(svc)
 		assert.NotNil(t, h)
 	})
@@ -34,7 +34,7 @@ func TestServiceInitialization(t *testing.T) {
 func TestRouterInitialization(t *testing.T) {
 	t.Run("Создание роутера", func(t *testing.T) {
 		repo := postgres.New()
-		svc := service.NewGofemartService(repo)
+		svc := service.NewGofemartService(repo, "http://localhost:8081")
 		h := handler.NewHandler(svc)
 		r := handler.NewRouter(h, svc)
 
@@ -50,7 +50,7 @@ func TestRouterInitialization(t *testing.T) {
 func TestServerConfiguration(t *testing.T) {
 	t.Run("Конфигурация HTTP сервера", func(t *testing.T) {
 		repo := postgres.New()
-		svc := service.NewGofemartService(repo)
+		svc := service.NewGofemartService(repo, "http://localhost:8081")
 		h := handler.NewHandler(svc)
 		r := handler.NewRouter(h, svc)
 
@@ -105,7 +105,7 @@ func TestApplicationInitialization(t *testing.T) {
 		repo := postgres.New()
 		require.NotNil(t, repo)
 
-		svc := service.NewGofemartService(repo)
+		svc := service.NewGofemartService(repo, "http://localhost:8081")
 		require.NotNil(t, svc)
 
 		h := handler.NewHandler(svc)
