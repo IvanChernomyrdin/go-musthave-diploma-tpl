@@ -248,7 +248,7 @@ func (ol *OrderListener) queryAccrualService(ctx context.Context, number string)
 
 func (ol *OrderListener) updateOrderStatus(ctx context.Context, uid int, status string, accrual float64) error {
 	res, err := ol.db.ExecContext(ctx,
-		`UPDATE orders SET status=$1, accrual=$2, updated_at=NOW() WHERE uid=$3`,
+		`UPDATE orders SET status=$1, accrual=$2, uploaded_at=NOW() WHERE uid=$3`,
 		status, accrual, uid)
 	if err != nil {
 		return fmt.Errorf("DB update failed: %w", err)
