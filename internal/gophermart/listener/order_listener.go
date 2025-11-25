@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -32,20 +31,9 @@ func NewOrderListener(dbURI, accrualSystemAddress string, logger *zap.SugaredLog
 }
 
 func (ol *OrderListener) Start(ctx context.Context) {
-	ol.logger.Info("=== ORDER LISTENER STARTING ===")
-	ol.logger.Infof("Raw Database URI: %s", ol.dbURI)
-	ol.logger.Infof("Accrual address: %s", ol.accrualSystemAddress)
-
 	// убираем кавычки, если они есть
 	dsn := strings.Trim(ol.dbURI, `"`)
 	ol.logger.Infof("Sanitized Database URI: %s", dsn)
-
-	// Очистка env чтобы pgx не подхватывал старые переменные
-	os.Unsetenv("PGUSER")
-	os.Unsetenv("PGPASSWORD")
-	os.Unsetenv("PGDATABASE")
-	os.Unsetenv("PGHOST")
-	os.Unsetenv("PGPORT")
 
 	var err error
 	ol.db, err = sql.Open("pgx", dsn)
@@ -76,7 +64,7 @@ func (ol *OrderListener) loadExistingOrders(ctx context.Context) {
 		`SELECT uid, user_id, number, status, uploaded_at 
          FROM orders WHERE status='NEW' ORDER BY uploaded_at ASC`)
 	if err != nil {
-		ol.logger.Errorf("Load failed: %v", err)
+		ol.logger.Errorf("load failed: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -85,7 +73,7 @@ func (ol *OrderListener) loadExistingOrders(ctx context.Context) {
 	for rows.Next() {
 		var job Job
 		if err := rows.Scan(&job.OrderID, &job.UserID, &job.Number, &job.Status, &job.CreatedAt); err != nil {
-			ol.logger.Errorf("Row scan failed: %v", err)
+			ol.logger.Errorf("row scan failed: %v", err)
 			continue
 		}
 		job.Attempt = 0
@@ -93,11 +81,15 @@ func (ol *OrderListener) loadExistingOrders(ctx context.Context) {
 		// ВАЖНО: запускаем обработку заказа в отдельной горутине, без WorkerPool
 		go func(j Job) {
 			if err := ol.processOrder(ctx, j); err != nil {
-				ol.logger.Errorf("Failed to process existing order %s: %v", j.Number, err)
+				ol.logger.Errorf("failed to process existing order %s: %v", j.Number, err)
 			}
 		}(job)
 
 		count++
+	}
+
+	if err := rows.Err(); err != nil {
+		ol.logger.Errorf("rows iteration failed: %v", err)
 	}
 
 	ol.logger.Infof("Existing orders loaded: %d", count)
@@ -106,19 +98,19 @@ func (ol *OrderListener) loadExistingOrders(ctx context.Context) {
 func (ol *OrderListener) listenNotifications(ctx context.Context) {
 	cfg, err := pgxpool.ParseConfig(strings.Trim(ol.dbURI, `"`))
 	if err != nil {
-		ol.logger.Errorf("Failed to parse pgx config: %v", err)
+		ol.logger.Errorf("failed to parse pgx config: %v", err)
 		return
 	}
 
 	conn, err := pgx.ConnectConfig(ctx, cfg.ConnConfig)
 	if err != nil {
-		ol.logger.Errorf("Failed to connect to Postgres for LISTEN: %v", err)
+		ol.logger.Errorf("failed to connect to Postgres for LISTEN: %v", err)
 		return
 	}
 	defer conn.Close(ctx)
 
 	if _, err := conn.Exec(ctx, "LISTEN new_orders"); err != nil {
-		ol.logger.Errorf("Failed LISTEN: %v", err)
+		ol.logger.Errorf("failed LISTEN: %v", err)
 		return
 	}
 
@@ -149,7 +141,7 @@ func (ol *OrderListener) listenNotifications(ctx context.Context) {
 		// Снова — запускаем обработку без WorkerPool
 		go func(j Job) {
 			if err := ol.processOrder(ctx, j); err != nil {
-				ol.logger.Errorf("Failed to process notified order %s: %v", j.Number, err)
+				ol.logger.Errorf("failed to process notified order %s: %v", j.Number, err)
 			}
 		}(job)
 	}
@@ -180,7 +172,7 @@ func (ol *OrderListener) processOrder(ctx context.Context, job Job) error {
 		if result != nil {
 			ol.logger.Infof("Accrual result for order %s: %+v", job.Number, result)
 			if err := ol.updateOrderStatus(ctx, job.OrderID, result.Status, result.Accrual); err != nil {
-				ol.logger.Errorf("Failed to update order %s: %v", job.Number, err)
+				ol.logger.Errorf("failed to update order %s: %v", job.Number, err)
 				return err
 			}
 
@@ -211,7 +203,7 @@ func (ol *OrderListener) queryAccrualService(ctx context.Context, number string)
 
 	resp, err := client.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -219,7 +211,7 @@ func (ol *OrderListener) queryAccrualService(ctx context.Context, number string)
 	case http.StatusOK:
 		var r AccrualResponse
 		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-			return nil, fmt.Errorf("Failed to decode accrual response: %w", err)
+			return nil, fmt.Errorf("failed to decode accrual response: %w", err)
 		}
 		return &r, nil
 
@@ -251,7 +243,7 @@ func (ol *OrderListener) updateOrderStatus(ctx context.Context, uid int, status 
 		`UPDATE orders SET status=$1, accrual=$2, uploaded_at=NOW() WHERE uid=$3`,
 		status, accrual, uid)
 	if err != nil {
-		return fmt.Errorf("DB update failed: %w", err)
+		return fmt.Errorf("db update failed: %w", err)
 	}
 
 	n, _ := res.RowsAffected()
