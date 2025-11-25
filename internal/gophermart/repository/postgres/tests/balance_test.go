@@ -25,7 +25,7 @@ func TestPostgresStorage_GetBalance(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name:   "Успешное получение баланса",
+			name:   "Successful balance receipt",
 			userID: 1,
 			setupMock: func() {
 				rows := sqlmock.NewRows([]string{"current", "withdrawn"}).
@@ -41,7 +41,7 @@ func TestPostgresStorage_GetBalance(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:   "Баланс пустой",
+			name:   "Empty balance",
 			userID: 2,
 			setupMock: func() {
 				rows := sqlmock.NewRows([]string{"current", "withdrawn"}).
@@ -57,7 +57,7 @@ func TestPostgresStorage_GetBalance(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:   "Ошибка базы данных",
+			name:   "Database error",
 			userID: 3,
 			setupMock: func() {
 				mock.ExpectQuery(`SELECT`).
@@ -68,7 +68,7 @@ func TestPostgresStorage_GetBalance(t *testing.T) {
 			expectError:    true,
 		},
 		{
-			name:   "Нет строк (возвращает нули)",
+			name:   "No rows (returns zeros)",
 			userID: 4,
 			setupMock: func() {
 				rows := sqlmock.NewRows([]string{"current", "withdrawn"})

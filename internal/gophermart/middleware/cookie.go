@@ -27,34 +27,34 @@ func AccessCookieMiddleware(repo *service.GofemartService) func(http.Handler) ht
 			// Получаем куки
 			cookie, err := r.Cookie("userID")
 			if err != nil {
-				http.Error(w, "Authentication required", http.StatusUnauthorized)
+				http.Error(w, "authentication required", http.StatusUnauthorized)
 				return
 			}
 
 			// Проверяем срок жизни куки
 			if !cookie.Expires.IsZero() && cookie.Expires.Before(time.Now()) {
-				http.Error(w, "Cookie expired", http.StatusUnauthorized)
+				http.Error(w, "cookie expired", http.StatusUnauthorized)
 				return
 			}
 
 			// Пытаемся расшифровать куки
 			userIDStr, err := decrypt(cookie.Value)
 			if err != nil {
-				http.Error(w, "Invalid authentication cookie", http.StatusUnauthorized)
+				http.Error(w, "invalid authentication cookie", http.StatusUnauthorized)
 				return
 			}
 
 			// Конвертируем строку в число (ID пользователя)
 			userID, err := strconv.Atoi(userIDStr)
 			if err != nil {
-				http.Error(w, "Invalid user ID in cookie", http.StatusUnauthorized)
+				http.Error(w, "invalid user ID in cookie", http.StatusUnauthorized)
 				return
 			}
 
 			// Проверяем что пользователь существует в БД
 			user, err := repo.GetUserByID(userID)
 			if err != nil || user == nil {
-				http.Error(w, "User not found", http.StatusUnauthorized)
+				http.Error(w, "user not found", http.StatusUnauthorized)
 				return
 			}
 

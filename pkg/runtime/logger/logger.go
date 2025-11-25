@@ -15,9 +15,9 @@ type HTTPLogger struct {
 
 func NewHTTPLogger() *HTTPLogger {
 	// Создаем папку runtime/log
-	logDir := "internal/gophermart/runtime/log"
+	logDir := "pkg/runtime/log"
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		panic("Failed to create log directory: " + err.Error())
+		panic("failed to create log directory: " + err.Error())
 	}
 
 	// Настраиваем lumberjack

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 	serviceTest "go-musthave-diploma-tpl/internal/gophermart/service"
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
@@ -17,7 +18,7 @@ func TestGofemartService_GetUserByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	expectedUser := &models.User{
@@ -42,7 +43,7 @@ func TestGofemartService_GetUserByID_InvalidID(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name   string
@@ -58,7 +59,7 @@ func TestGofemartService_GetUserByID_InvalidID(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Nil(t, user)
-			assert.Equal(t, "invalid user ID", err.Error())
+			assert.Equal(t, handler.ErrInvalidUserID.Error(), err.Error())
 		})
 	}
 }
@@ -68,7 +69,7 @@ func TestGofemartService_GetUserByID_NotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 999
 
@@ -87,7 +88,7 @@ func TestGofemartService_GetUserByID_DatabaseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 

@@ -10,13 +10,12 @@ import (
 
 	"go-musthave-diploma-tpl/internal/gophermart/middleware"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
-	service "go-musthave-diploma-tpl/internal/gophermart/service"
+	"go-musthave-diploma-tpl/internal/gophermart/service"
 
 	pgk "go-musthave-diploma-tpl/pkg"
 	logger "go-musthave-diploma-tpl/pkg/runtime/logger"
 )
 
-// логгер
 var castomLogger = logger.NewHTTPLogger().Logger.Sugar()
 
 type Handler struct {
@@ -28,218 +27,249 @@ func NewHandler(svc *service.GofemartService) *Handler {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		http.Error(w, `{"error":"content-type must be application/json"}`, http.StatusBadRequest)
 		return
 	}
 
 	var req models.RegisterRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, `{"error":"`+ErrInvalidJSONFormat.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, "Login and password are required", http.StatusBadRequest)
+		http.Error(w, `{"error":"`+ErrLoginAndPasswordRequired.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.RegisterUser(req.Login, req.Password)
 	if err != nil {
 		switch err.Error() {
-		case "login and password are required":
-			http.Error(w, "Login and password are required", http.StatusBadRequest)
 		case "login already exists":
-			http.Error(w, "Login already taken", http.StatusConflict)
+			http.Error(w, `{"error":"login already taken"}`, http.StatusConflict)
+		case "login and password are required":
+			http.Error(w, `{"error":"login and password are required"}`, http.StatusBadRequest)
 		default:
-			castomLogger.Infof("Error registering user: %v\n", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 		}
 		return
 	}
 
-	// Используем публичную функцию из middleware cookie
-	userIDStr := strconv.Itoa(user.ID)
-	middleware.SetEncryptedCookie(w, userIDStr)
-
-	w.Header().Set("Content-Type", "application/json")
+	middleware.SetEncryptedCookie(w, strconv.Itoa(user.ID))
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "User successfully registered",
-		"user_id": user.ID,
-		"login":   user.Login,
-	})
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
+		http.Error(w, `{"error":"content-type must be application/json"}`, http.StatusBadRequest)
 		return
 	}
 
 	var req models.RegisterRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		http.Error(w, `{"error":"`+ErrInvalidJSONFormat.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
 	if req.Login == "" || req.Password == "" {
-		http.Error(w, "Login and password are required", http.StatusBadRequest)
+		http.Error(w, `{"error":"`+ErrLoginAndPasswordRequired.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.LoginUser(req.Login, req.Password)
 	if err != nil {
-		switch err.Error() {
-		case "invalid login or password":
-			http.Error(w, "Invalid login or password", http.StatusUnauthorized) // 401!
-		default:
-			castomLogger.Infof("Error logging in user: %v\n", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		if errors.Is(err, ErrInvalidLoginOrPassword) {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusUnauthorized)
+		} else {
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
+			http.Error(w, `{"error":"`+ErrInternalServerError.Error()+`"}`, http.StatusInternalServerError)
 		}
 		return
 	}
 
-	// Устанавливаем аутентификационную куку
-	userIDStr := strconv.Itoa(user.ID)
-	middleware.SetEncryptedCookie(w, userIDStr)
-
-	w.Header().Set("Content-Type", "application/json")
+	middleware.SetEncryptedCookie(w, strconv.Itoa(user.ID))
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Successfully logged in",
-		"user_id": user.ID,
-		"login":   user.Login,
-	})
 }
 
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
-	// нужно реализовать 200, 202, 400, 401, 409, 422, 500
-	// пароверили метод text
-	if r.Header.Get("Content-Type") != "text/plain" {
-		http.Error(w, "неверный формат запроса", http.StatusBadRequest) // 400
-		return
-	}
-	// проверили cookie
+	w.Header().Set("Content-Type", "application/json")
+
+	// Получаем ID пользователя из контекста
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized) // 401
+		http.Error(w, `{"error":"user is not authenticated"}`, http.StatusUnauthorized)
 		return
 	}
-	// читаем тело
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		http.Error(w, `{"error":"failed to read request body"}`, http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
-	// убираем пробелы из строки
-	number := strings.TrimSpace(string(body))
-	// строка должан быть не пустая
-	if number == "" {
-		http.Error(w, "Order number is required", http.StatusBadRequest)
-		return
-	}
-	// проверяем что в строке все цифры
-	if !pgk.ContainsOnlyDigits(number) {
-		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity) //422
-		return
-	}
-	// проходим алгоритмом луна
-	if !pgk.ValidateLuhn(number) {
-		http.Error(w, "неверный формат номера", http.StatusUnprocessableEntity)
+
+	orderNumber := strings.TrimSpace(string(body))
+	if orderNumber == "" {
+		http.Error(w, `{"error":"order number is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	// Преобразуем string в int64
-	userIDint, err := strconv.Atoi(userID)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+	if !pgk.ContainsOnlyDigits(orderNumber) || !pgk.ValidateLuhn(orderNumber) {
+		http.Error(w, `{"error":"invalid order number"}`, http.StatusUnprocessableEntity)
 		return
 	}
 
-	// если всё удачно записываем в бд
-	err = h.svc.CreateOrder(userIDint, number)
+	userIDint, _ := strconv.Atoi(userID)
+
+	// Создаём заказ в базе
+	err = h.svc.CreateOrder(userIDint, orderNumber)
 	if err != nil {
 		switch {
-		case errors.Is(err, models.ErrDuplicateOrder):
-			w.WriteHeader(http.StatusOK) //200 если уже был загружен
-			w.Write([]byte(err.Error()))
-		case errors.Is(err, models.ErrOtherUserOrder): //409 если другой пользователь уже загрузил
+		case errors.Is(err, ErrDuplicateOrder):
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{"message": "order already uploaded"})
+		case errors.Is(err, ErrOtherUserOrder):
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(err.Error()))
+			json.NewEncoder(w).Encode(map[string]string{"error": "order already uploaded by another user"})
 		default:
-			http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError) //500
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
+			http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 		}
 		return
 	}
+
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("успешное создание заказа"))
+	json.NewEncoder(w).Encode(map[string]string{"message": "order accepted for processing"})
 }
 
 func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
+		http.Error(w, ErrUserIsNotAuthenticated.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	userIDint, err := strconv.Atoi(userID)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
-		return
-	}
+	userIDint, _ := strconv.Atoi(userID)
 	result, err := h.svc.GetOrders(userIDint)
-
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("внутренняя ошибка сервера"))
+		http.Error(w, ErrInternalServerError.Error(), http.StatusInternalServerError)
+		return
 	}
+
 	if len(result) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-		w.Write([]byte("нет данных для ответа"))
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode([]interface{}{})
+		return
 	}
-	w.Header().Set("Content-type", "application/json")
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
-		http.Error(w, "пользователь не аутентифицирован", http.StatusUnauthorized)
+		http.Error(w, `{"error":"`+ErrUserIsNotAuthenticated.Error()+`"}`, http.StatusUnauthorized)
 		return
 	}
 
 	userIDint, err := strconv.Atoi(userID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+		http.Error(w, `{"error":"invalid user ID"}`, http.StatusInternalServerError)
 		return
 	}
-
 	result, err := h.svc.GetBalance(userIDint)
 	if err != nil {
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+		http.Error(w, `{"error":"`+ErrInternalServerError.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+}
 
-	if err := json.NewEncoder(w).Encode(result); err != nil {
-		http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"`+ErrUserIsNotAuthenticated.Error()+`"}`, http.StatusUnauthorized)
 		return
 	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, `{"error":"content-type must be application/json"}`, http.StatusBadRequest)
+		return
+	}
+
+	var withdraw models.WithdrawBalance
+	if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
+		http.Error(w, `{"error":"`+ErrInvalidJSONFormat.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+
+	if withdraw.Sum <= 0 {
+		http.Error(w, `{"error":"sum must be positive"}`, http.StatusBadRequest)
+		return
+	}
+	if !pgk.ContainsOnlyDigits(withdraw.Order) || !pgk.ValidateLuhn(withdraw.Order) {
+		http.Error(w, `{"error":"invalid order number"}`, http.StatusUnprocessableEntity)
+		return
+	}
+
+	userIDint, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, `{"error":"invalid user ID"}`, http.StatusInternalServerError)
+		return
+	}
+	err = h.svc.Withdraw(userIDint, withdraw)
+	if err != nil {
+		switch err {
+		case ErrInvalidOrderNumber:
+			http.Error(w, `{"error":"`+ErrInvalidOrderNumber.Error()+`"}`, http.StatusUnprocessableEntity)
+		case ErrLackOfFunds:
+			http.Error(w, `{"error":"`+ErrLackOfFunds.Error()+`"}`, http.StatusPaymentRequired)
+		default:
+			castomLogger.Infof(ErrInternalServerError.Error(), err.Error())
+			http.Error(w, `{"error":"`+ErrInternalServerError.Error()+`"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(struct{}{})
+}
+
+func (h *Handler) Withdrawals(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"`+ErrUserIsNotAuthenticated.Error()+`"}`, http.StatusUnauthorized)
+		return
+	}
+
+	userIDint, _ := strconv.Atoi(userID)
+	withdrawals, err := h.svc.Withdrawals(userIDint)
+	if err != nil {
+		http.Error(w, `{"error":"`+ErrInternalServerError.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(withdrawals)
 }

@@ -2,14 +2,18 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"go-musthave-diploma-tpl/internal/gophermart/models"
 )
 
 // GofemartRepo - интерфейс репозитория
 type GofemartRepo interface {
+	// получение пользователя по логину и паролю
 	GetUserByLoginAndPassword(login, password string) (*models.User, error)
+	// создание пользователя
 	CreateUser(login, password string) (*models.User, error)
+	// получаем пользователя по ID
 	GetUserByID(id int) (*models.User, error)
 	// создание и проверка заказа
 	CreateOrder(userID int, orderNumber string) error
@@ -17,20 +21,28 @@ type GofemartRepo interface {
 	GetOrders(userID int) ([]models.Order, error)
 	// получение баланса
 	GetBalance(userID int) (models.Balance, error)
+	// запрос на списание средств
+	Withdraw(userID int, withdraw models.WithdrawBalance) error
+	// получение списка информации о выводе средств
+	Withdrawals(userID int) ([]models.WithdrawBalance, error)
 }
 
 // GofemartService - сервис с бизнес-логикой
 type GofemartService struct {
-	repo GofemartRepo
+	repo             GofemartRepo
+	accrualSystemURL string
 }
 
-func NewGofemartService(repo GofemartRepo) *GofemartService {
-	return &GofemartService{repo: repo}
+func NewGofemartService(repo GofemartRepo, accrualURL string) *GofemartService {
+	return &GofemartService{
+		repo:             repo,
+		accrualSystemURL: accrualURL,
+	}
 }
 
 func (s *GofemartService) RegisterUser(login, password string) (*models.User, error) {
 	if login == "" || password == "" {
-		return nil, fmt.Errorf("login and password are required")
+		return nil, errors.New("login and password are required")
 	}
 
 	user, err := s.repo.CreateUser(login, password)
@@ -90,4 +102,12 @@ func (s *GofemartService) GetBalance(userID int) (models.Balance, error) {
 		return models.Balance{}, fmt.Errorf("invalid user ID")
 	}
 	return s.repo.GetBalance(userID)
+}
+
+func (s *GofemartService) Withdraw(userID int, withdraw models.WithdrawBalance) error {
+	return s.repo.Withdraw(userID, withdraw)
+}
+
+func (s *GofemartService) Withdrawals(userID int) ([]models.WithdrawBalance, error) {
+	return s.repo.Withdrawals(userID)
 }
