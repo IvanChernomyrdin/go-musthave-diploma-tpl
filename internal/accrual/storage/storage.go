@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"go-musthave-diploma-tpl/internal/accrual/models"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -71,7 +72,7 @@ func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardTy
 	var exists bool
 	err = tx.QueryRow(`
 		SELECT EXISTS (
-			SELECT 1 FROM products
+			SELECT * FROM products
 			WHERE match = $1
 		)
 	`, match).Scan(&exists)
@@ -96,4 +97,187 @@ func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardTy
 		return fmt.Errorf("%s Commit err:%w", op, err)
 	}
 	return nil
+}
+
+func (db *PostgresDB) RegisterNewOrder(order int64, goods []models.Goods, status string) error {
+	op := "path: internal/accrual/storage/RegisterNewOrder"
+
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("%s starts a transaction err: %w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	goodsArray := make([]string, len(goods))
+	for i, good := range goods {
+
+		desc := strings.ReplaceAll(good.Description, "'", "''")
+		goodsArray[i] = fmt.Sprintf("ROW('%s', %f)", desc, good.Price)
+	}
+
+	goodsArrayStr := "ARRAY[" + strings.Join(goodsArray, ", ") + "]::goods[]"
+
+	query := fmt.Sprintf(`
+        INSERT INTO orders (order, goods, status)
+        VALUES ($1, $2, $3)
+    `)
+
+	_, err = tx.Exec(query, order, goodsArrayStr, status)
+	if err != nil {
+		return fmt.Errorf("%s Exec err: %w", op, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("%s Commit err: %w", op, err)
+	}
+	return nil
+}
+
+func (db *PostgresDB) CheckOrderExists(order int64) (bool, error) {
+	op := "path: internal/accrual/storage/CheckOrderExists"
+
+	var exists bool
+	err := db.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT * FROM orders
+			WHERE order = $1
+		)
+	`, order).Scan(&exists)
+	if err != nil {
+		return exists, fmt.Errorf("%s QueryRow err:%w", op, err)
+	}
+
+	return exists, nil
+}
+
+func (db *PostgresDB) GetAccrualInfo(order int64) (string, float64, error) {
+	op := "path: internal/accrual/storage/GetAccrualInfo"
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return "", 0, fmt.Errorf("%s starts a transaction err:%w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var accrual float64
+	var status string
+	err = tx.QueryRow(`
+		SELECT accrual, status FROM orders
+		WHERE order = $1
+		`, order).Scan(&accrual, &status)
+	if err != nil {
+		return "", 0, fmt.Errorf("%s QueryRow err:%w", op, err)
+	}
+	return status, accrual, nil
+
+}
+
+func (db *PostgresDB) UpdateAccrualInfo(order int64, accrual int64, status string) error {
+	op := "path: internal/accrual/storage/UpdateAccrualInfo"
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("%s starts a transaction err:%w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.Exec(`
+		UPDATE orders SET accrual = $1, status = $2
+		WHERE order = $3
+	`, accrual, status, order)
+	if err != nil {
+		return fmt.Errorf("%s Exec err:%w", op, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("%s Commit err:%w", op, err)
+	}
+	return nil
+}
+
+func (db *PostgresDB) UpdateStatus(status string, order int64) error {
+	op := "path: internal/accrual/storage/UpdateStatus"
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return fmt.Errorf("%s starts a transaction err:%w", op, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		err = tx.Commit()
+		if err != nil {
+			fmt.Errorf("%s Commit err:%v", op, err)
+		}
+	}()
+
+	_, err = tx.Exec(`
+		UPDATE orders SET status = $1
+		WHERE order = $2
+	`, status, order)
+	if err != nil {
+		return fmt.Errorf("%s Exec err:%w", op, err)
+	}
+	return nil
+}
+
+func (db *PostgresDB) GetProductsInfo() ([]models.ProductReward, error) {
+	op := "path: internal/accrual/storage/GetProductsInfo"
+	var productsInfo []models.ProductReward
+
+	rows, err := db.DB.Query(`SELECT match, reward, reward_type FROM products`)
+	if err != nil {
+		return productsInfo, fmt.Errorf("%s Query err:%w", op, err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var match string
+		var reward float64
+		var rewardType string
+		err = rows.Scan(&match, &reward, &rewardType)
+		if err != nil {
+			return productsInfo, fmt.Errorf("%s Scan err:%w", op, err)
+		}
+		productsInfo = append(productsInfo, models.ProductReward{
+			Match:      match,
+			Reward:     reward,
+			RewardType: rewardType,
+		})
+	}
+	return productsInfo, nil
+}
+
+func (db *PostgresDB) ParseMatch(match string) ([]models.ParseMatch, error) {
+	op := "path: internal/accrual/storage/ParseMatch"
+	rows, err := db.DB.Query("SELECT order, price FROM orders WHERE description LIKE $1 AND status NOT IN ('INVALID', 'PROCESSED')", fmt.Sprintf("%%%s%%", match))
+	if err != nil {
+		return []models.ParseMatch{}, fmt.Errorf("%s error executing query:%w", op, err)
+	}
+	defer rows.Close()
+	var parseMatches []models.ParseMatch
+	for rows.Next() {
+		var order int64
+		var price float64
+		err = rows.Scan(&order, &price)
+		if err != nil {
+			return []models.ParseMatch{}, fmt.Errorf("%s error scanning row:%w", op, err)
+		}
+		parseMatches = append(parseMatches, models.ParseMatch{
+			Order: order,
+			Price: price,
+		})
+	}
+	return []models.ParseMatch{}, nil
 }

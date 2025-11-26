@@ -2,30 +2,50 @@ package config
 
 import (
 	"flag"
-	"os"
+
+	"github.com/caarlos0/env/v6"
+)
+
+var (
+	runAddress  string
+	databaseUrl string
+	maxRequests int
+	timeout     int
 )
 
 type Config struct {
-	RUN_ADDRESS  string
-	DATABASE_URI string
+	RunAddress  string `env:"RUN_ADDRESS"`
+	DatabaseUrl string `env:"DATABASE_URI"`
+	MaxRequests int    `env:"MAX_REQUESTS"`
+	Timeout     int    `env:"TIMEOUT"`
 }
 
 func Load() *Config {
 	cfg := &Config{}
 
-	flag.StringVar(&cfg.RUN_ADDRESS, "a", "localhost:8082", "адрес и порт запуска сервиса")
-	flag.StringVar(&cfg.DATABASE_URI, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
-
+	flag.StringVar(&runAddress, "a", "localhost:8082", "адрес и порт запуска сервиса")
+	flag.StringVar(&databaseUrl, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
+	flag.IntVar(&maxRequests, "m", 100, "максимальное количество запросов")
+	flag.IntVar(&timeout, "t", 10, "таймаут в секундах")
 	flag.Parse()
 	cfg.applyEnv()
 	return cfg
 }
 
 func (cfg *Config) applyEnv() {
-	if envRUN_ADDRESS := os.Getenv("RUN_ADDRESS"); envRUN_ADDRESS != "" {
-		cfg.RUN_ADDRESS = envRUN_ADDRESS
+	env.Parse(&cfg)
+	if cfg.RunAddress == "" {
+		cfg.RunAddress = runAddress
 	}
-	if envDATABASE_URI := os.Getenv("DATABASE_URI"); envDATABASE_URI != "" {
-		cfg.DATABASE_URI = envDATABASE_URI
+	if cfg.DatabaseUrl == "" {
+		cfg.DatabaseUrl = databaseUrl
 	}
+	if cfg.MaxRequests == 0 {
+
+		cfg.MaxRequests = maxRequests
+	}
+	if cfg.Timeout == 0 {
+		cfg.Timeout = timeout
+	}
+
 }
