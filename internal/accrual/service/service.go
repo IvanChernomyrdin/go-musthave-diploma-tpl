@@ -123,7 +123,7 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 			default:
 			}
 
-			if !luhn.ValidateLuhn(strconv.FormatInt(orderID, 10)) && !luhn.ValidateLuhn(strconv.FormatInt(orderID, 10)) {
+			if !luhn.ValidateLuhn(strconv.FormatInt(orderID, 10)) && !luhn.ContainsOnlyDigits(strconv.FormatInt(orderID, 10)) {
 				if err := s.repo.UpdateStatus(ctx, models.Invalid, orderID); err != nil {
 					log.Errorf("Failed to update status for order %d: %v", orderID, err)
 				}
