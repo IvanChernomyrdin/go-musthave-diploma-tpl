@@ -15,11 +15,7 @@ type HTTPLogger struct {
 
 func NewHTTPLogger() *HTTPLogger {
 	// Создаем папку runtime/log
-<<<<<<< HEAD
-	logDir := "internal/runtime/log"
-=======
 	logDir := "pkg/runtime/log"
->>>>>>> master
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		panic("failed to create log directory: " + err.Error())
 	}
