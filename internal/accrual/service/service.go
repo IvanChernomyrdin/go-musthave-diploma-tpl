@@ -101,7 +101,6 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 		return fmt.Errorf("failed to get products info: %w", err)
 	}
 
-	// Map to store all matching products for each order
 	orderProducts := make(map[int64][]orderProductMatch)
 	processedOrderIDs := make(map[int64]bool)
 
@@ -118,7 +117,6 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 			continue
 		}
 
-		// Collect all matching products for each order
 		for _, order := range orders {
 			orderProducts[order.Order] = append(orderProducts[order.Order], orderProductMatch{
 				Order:   order,
@@ -128,7 +126,6 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 		}
 	}
 
-	// Process each order with all its matching products
 	for orderID, matches := range orderProducts {
 		select {
 		case <-ctx.Done():
@@ -143,20 +140,18 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 			continue
 		}
 
-		// Calculate total accrual for all matching products
 		totalAccrual := 0.0
 		for _, match := range matches {
 			var accrual float64
 			if match.Product.RewardType == "%" {
 				accrual = match.Order.Price * match.Product.Reward / 100
 			} else {
-				// For fixed point rewards, we apply the reward per item
+
 				accrual = match.Product.Reward
 			}
 			totalAccrual += accrual
 		}
 
-		// Update order with total accrual
 		if err := s.repo.UpdateAccrualInfo(ctx, orderID, totalAccrual, models.Processed); err != nil {
 			log.Errorf("Failed to update accrual for order %d: %v", orderID, err)
 		} else {
