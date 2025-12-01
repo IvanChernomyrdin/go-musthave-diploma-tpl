@@ -23,7 +23,7 @@ func Run() {
 	customLogger := logger.NewHTTPLogger().Logger.Sugar()
 	cfg := config.Load()
 
-	storage, err := storage.InitPostgresDB(cfg.DatabaseUrl)
+	storage, err := storage.InitPostgresDB(cfg.DatabaseURL)
 
 	if err != nil {
 

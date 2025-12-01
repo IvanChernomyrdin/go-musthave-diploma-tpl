@@ -100,10 +100,6 @@ func (h *Handler) GetAccrualInfo(log *zap.SugaredLogger) http.HandlerFunc {
 			return
 		}
 		var info models.AccrualInfo
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 		info.Order = order
 		var exist bool
 

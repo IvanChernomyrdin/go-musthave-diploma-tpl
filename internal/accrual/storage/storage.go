@@ -228,10 +228,7 @@ func (db *PostgresDB) UpdateStatus(ctx context.Context, status string, order int
 		if err != nil {
 			tx.Rollback()
 		}
-		err = tx.Commit()
-		if err != nil {
-			fmt.Errorf("%s Commit err:%v", op, err)
-		}
+
 	}()
 
 	_, err = tx.ExecContext(ctx, `
@@ -240,6 +237,10 @@ func (db *PostgresDB) UpdateStatus(ctx context.Context, status string, order int
 	`, status, order)
 	if err != nil {
 		return fmt.Errorf("%s Exec err:%w", op, err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("%s Commit err:%v", op, err)
 	}
 	return nil
 }
@@ -252,6 +253,7 @@ func (db *PostgresDB) GetProductsInfo() ([]models.ProductReward, error) {
 	if err != nil {
 		return productsInfo, fmt.Errorf("%s Query err:%w", op, err)
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var match string
@@ -266,6 +268,9 @@ func (db *PostgresDB) GetProductsInfo() ([]models.ProductReward, error) {
 			Reward:     reward,
 			RewardType: rewardType,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		return productsInfo, fmt.Errorf("%s rows.Err():%w", op, err)
 	}
 	return productsInfo, nil
 }
@@ -290,6 +295,9 @@ func (db *PostgresDB) ParseMatch(match string) ([]models.ParseMatch, error) {
 			Price: price,
 		})
 	}
+	if err := rows.Err(); err != nil {
+		return parseMatches, fmt.Errorf("%s rows.Err():%w", op, err)
+	}
 	return parseMatches, nil
 }
 
@@ -311,6 +319,9 @@ func (db *PostgresDB) GetUnprocessedOrders() ([]int64, error) {
 			return orderIDs, fmt.Errorf("%s error scanning row:%w", op, err)
 		}
 		orderIDs = append(orderIDs, orderID)
+	}
+	if err := rows.Err(); err != nil {
+		return orderIDs, fmt.Errorf("%s rows.Err():%w", op, err)
 	}
 
 	return orderIDs, nil
