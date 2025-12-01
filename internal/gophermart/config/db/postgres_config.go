@@ -26,7 +26,9 @@ func Init(databaseDSN string) error {
 		return fmt.Errorf("database connection check failed: %v", err)
 	}
 
-	driver, err := postgres.WithInstance(DB, &postgres.Config{})
+	driver, err := postgres.WithInstance(DB, &postgres.Config{
+		MigrationsTable: "gophermart_schema_migrations",
+	})
 	if err != nil {
 		return fmt.Errorf("error creating migration driver: %v", err)
 	}

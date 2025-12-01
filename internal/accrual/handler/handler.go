@@ -81,7 +81,7 @@ func (h *Handler) RegisterNewOrder(ctx context.Context, log *zap.SugaredLogger) 
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
 	}
 }
 

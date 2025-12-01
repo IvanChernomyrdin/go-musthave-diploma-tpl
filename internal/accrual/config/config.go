@@ -25,8 +25,8 @@ type Config struct {
 func Load() *Config {
 	cfg := &Config{}
 
-	flag.StringVar(&runAddress, "a", "localhost:8082", "адрес и порт запуска сервиса")
-	flag.StringVar(&databaseURL, "d", "postgres://postgres:12345678@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
+	flag.StringVar(&runAddress, "a", "localhost:8081", "адрес и порт запуска сервиса")
+	flag.StringVar(&databaseURL, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
 	flag.IntVar(&maxRequests, "m", 100, "максимальное количество запросов")
 	flag.IntVar(&timeout, "t", 10, "таймаут в секундах")
 	flag.IntVar(&pollingInterval, "i", 10, "интервал повтора запросов")
