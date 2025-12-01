@@ -125,7 +125,7 @@ func TestService_RegisterNewOrder(t *testing.T) {
 			},
 			mockBehavior: func(r *mock_service.MockRepository, args args, exist bool) {
 				r.EXPECT().CheckOrderExists(int64(12345)).Return(exist, nil)
-				r.EXPECT().RegisterNewOrder(context.Background(), int64(12345), args.order.Goods, models.Registered).Return(nil)
+				// RegisterNewOrder should not be called when order already exists
 			},
 			exist:       true,
 			expectedErr: false,
