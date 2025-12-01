@@ -11,6 +11,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// orderProductMatch represents a match between an order item and a product rule
+type orderProductMatch struct {
+	Order   models.ParseMatch
+	Product models.ProductReward
+}
+
 //go:generate mockgen -source=service.go -destination=mocks/mock.go -package=mock_service
 type Repository interface {
 	CreateProductReward(ctx context.Context, match string, reward float64, rewardType string) error
@@ -95,6 +101,8 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 		return fmt.Errorf("failed to get products info: %w", err)
 	}
 
+	// Map to store all matching products for each order
+	orderProducts := make(map[int64][]orderProductMatch)
 	processedOrderIDs := make(map[int64]bool)
 
 	for _, product := range products {
@@ -110,29 +118,49 @@ func (s *Service) processOrders(ctx context.Context, log *zap.SugaredLogger) err
 			continue
 		}
 
-		orderMap := make(map[int64][]models.ParseMatch)
+		// Collect all matching products for each order
 		for _, order := range orders {
-			orderMap[order.Order] = append(orderMap[order.Order], order)
+			orderProducts[order.Order] = append(orderProducts[order.Order], orderProductMatch{
+				Order:   order,
+				Product: product,
+			})
 			processedOrderIDs[order.Order] = true
 		}
+	}
 
-		for orderID, orderItems := range orderMap {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
+	// Process each order with all its matching products
+	for orderID, matches := range orderProducts {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 
-			if !luhn.ValidateLuhn(strconv.FormatInt(orderID, 10)) && !luhn.ContainsOnlyDigits(strconv.FormatInt(orderID, 10)) {
-				if err := s.repo.UpdateStatus(ctx, models.Invalid, orderID); err != nil {
-					log.Errorf("Failed to update status for order %d: %v", orderID, err)
-				}
-				continue
+		if !luhn.ValidateLuhn(strconv.FormatInt(orderID, 10)) && !luhn.ContainsOnlyDigits(strconv.FormatInt(orderID, 10)) {
+			if err := s.repo.UpdateStatus(ctx, models.Invalid, orderID); err != nil {
+				log.Errorf("Failed to update status for order %d: %v", orderID, err)
 			}
+			continue
+		}
 
-			if err := s.updateOrderAccrual(ctx, log, orderID, orderItems, product); err != nil {
-				log.Errorf("Failed to update accrual for order %d: %v", orderID, err)
+		// Calculate total accrual for all matching products
+		totalAccrual := 0.0
+		for _, match := range matches {
+			var accrual float64
+			if match.Product.RewardType == "%" {
+				accrual = match.Order.Price * match.Product.Reward / 100
+			} else {
+				// For fixed point rewards, we apply the reward per item
+				accrual = match.Product.Reward
 			}
+			totalAccrual += accrual
+		}
+
+		// Update order with total accrual
+		if err := s.repo.UpdateAccrualInfo(ctx, orderID, totalAccrual, models.Processed); err != nil {
+			log.Errorf("Failed to update accrual for order %d: %v", orderID, err)
+		} else {
+			log.Infof("Updated accrual for order %d: %.2f", orderID, totalAccrual)
 		}
 	}
 
@@ -164,7 +192,7 @@ func (s *Service) updateOrderAccrual(ctx context.Context, log *zap.SugaredLogger
 	// Общая сумма начислений для всех товаров в заказе
 	for _, item := range orderItems {
 		var accrual float64
-		if product.RewardType == "pt" {
+		if product.RewardType == "%" {
 
 			accrual = item.Price * product.Reward / 100
 		} else {
