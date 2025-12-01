@@ -1,13 +1,13 @@
 CREATE TYPE goods AS (
-    description VARCHAR(255) NOT NULL,
-    price numeric(10,2) NOT NULL
+    description VARCHAR(255),
+    price NUMERIC(10, 2)
 );
 
 
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
-    order INT NOT NULL UNIQUE,
-    goods goods[] NOT NULL,
+    order_id BIGINT NOT NULL UNIQUE,
+    goods goods[],
     status VARCHAR(10),
     accrual numeric(10,2)
 );

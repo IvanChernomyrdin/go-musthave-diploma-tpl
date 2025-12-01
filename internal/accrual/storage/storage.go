@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"go-musthave-diploma-tpl/internal/accrual/models"
@@ -57,7 +58,11 @@ func (db *PostgresDB) CheckConnection() error {
 	return nil
 }
 
-func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardType string) error {
+func (db *PostgresDB) Close() error {
+	return db.DB.Close()
+}
+
+func (db *PostgresDB) CreateProductReward(ctx context.Context, match string, reward float64, rewardType string) error {
 	op := "path: internal/accrual/storage/CreateProductReward"
 	tx, err := db.DB.Begin()
 	if err != nil {
@@ -70,7 +75,7 @@ func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardTy
 	}()
 
 	var exists bool
-	err = tx.QueryRow(`
+	err = tx.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT * FROM products
 			WHERE match = $1
@@ -84,7 +89,7 @@ func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardTy
 		return ErrKeyExists
 	}
 
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO products (match, reward, reward_type)
 		VALUES ($1, $2, $3)
 	`, match, reward, rewardType)
@@ -99,7 +104,7 @@ func (db *PostgresDB) CreateProductReward(match string, reward float64, rewardTy
 	return nil
 }
 
-func (db *PostgresDB) RegisterNewOrder(order int64, goods []models.Goods, status string) error {
+func (db *PostgresDB) RegisterNewOrder(ctx context.Context, order int64, goods []models.Goods, status string) error {
 	op := "path: internal/accrual/storage/RegisterNewOrder"
 
 	tx, err := db.DB.Begin()
@@ -112,21 +117,24 @@ func (db *PostgresDB) RegisterNewOrder(order int64, goods []models.Goods, status
 		}
 	}()
 
-	goodsArray := make([]string, len(goods))
+	// Build the goods array using proper PostgreSQL composite type syntax
+	goodsValues := make([]string, len(goods))
 	for i, good := range goods {
-
+		// Escape single quotes by replacing each ' with ''
 		desc := strings.ReplaceAll(good.Description, "'", "''")
-		goodsArray[i] = fmt.Sprintf("ROW('%s', %f)", desc, good.Price)
+		// For composite types in arrays, we need to use proper escaping
+		goodsValues[i] = fmt.Sprintf(`"(%s,%f)"`, desc, good.Price)
 	}
 
-	goodsArrayStr := "ARRAY[" + strings.Join(goodsArray, ", ") + "]::goods[]"
+	// Create the array literal with proper PostgreSQL syntax
+	goodsArrayStr := "{" + strings.Join(goodsValues, ",") + "}"
 
-	query := fmt.Sprintf(`
-        INSERT INTO orders (order, goods, status)
-        VALUES ($1, $2, $3)
-    `)
+	query := `
+        INSERT INTO orders (order_id, goods, status)
+        VALUES ($1, $2::goods[], $3)
+    `
 
-	_, err = tx.Exec(query, order, goodsArrayStr, status)
+	_, err = tx.ExecContext(ctx, query, order, goodsArrayStr, status)
 	if err != nil {
 		return fmt.Errorf("%s Exec err: %w", op, err)
 	}
@@ -145,7 +153,7 @@ func (db *PostgresDB) CheckOrderExists(order int64) (bool, error) {
 	err := db.DB.QueryRow(`
 		SELECT EXISTS (
 			SELECT * FROM orders
-			WHERE order = $1
+			WHERE order_id = $1
 		)
 	`, order).Scan(&exists)
 	if err != nil {
@@ -167,20 +175,23 @@ func (db *PostgresDB) GetAccrualInfo(order int64) (string, float64, error) {
 		}
 	}()
 
-	var accrual float64
+	var accrual sql.NullFloat64
 	var status string
 	err = tx.QueryRow(`
 		SELECT accrual, status FROM orders
-		WHERE order = $1
+		WHERE order_id = $1
 		`, order).Scan(&accrual, &status)
 	if err != nil {
 		return "", 0, fmt.Errorf("%s QueryRow err:%w", op, err)
 	}
-	return status, accrual, nil
+	if accrual.Valid {
+		return status, accrual.Float64, nil
+	}
+	return status, 0, nil
 
 }
 
-func (db *PostgresDB) UpdateAccrualInfo(order int64, accrual int64, status string) error {
+func (db *PostgresDB) UpdateAccrualInfo(ctx context.Context, order int64, accrual float64, status string) error {
 	op := "path: internal/accrual/storage/UpdateAccrualInfo"
 	tx, err := db.DB.Begin()
 	if err != nil {
@@ -192,9 +203,9 @@ func (db *PostgresDB) UpdateAccrualInfo(order int64, accrual int64, status strin
 		}
 	}()
 
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		UPDATE orders SET accrual = $1, status = $2
-		WHERE order = $3
+		WHERE order_id = $3
 	`, accrual, status, order)
 	if err != nil {
 		return fmt.Errorf("%s Exec err:%w", op, err)
@@ -207,7 +218,7 @@ func (db *PostgresDB) UpdateAccrualInfo(order int64, accrual int64, status strin
 	return nil
 }
 
-func (db *PostgresDB) UpdateStatus(status string, order int64) error {
+func (db *PostgresDB) UpdateStatus(ctx context.Context, status string, order int64) error {
 	op := "path: internal/accrual/storage/UpdateStatus"
 	tx, err := db.DB.Begin()
 	if err != nil {
@@ -223,9 +234,9 @@ func (db *PostgresDB) UpdateStatus(status string, order int64) error {
 		}
 	}()
 
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		UPDATE orders SET status = $1
-		WHERE order = $2
+		WHERE order_id = $2
 	`, status, order)
 	if err != nil {
 		return fmt.Errorf("%s Exec err:%w", op, err)
@@ -261,7 +272,7 @@ func (db *PostgresDB) GetProductsInfo() ([]models.ProductReward, error) {
 
 func (db *PostgresDB) ParseMatch(match string) ([]models.ParseMatch, error) {
 	op := "path: internal/accrual/storage/ParseMatch"
-	rows, err := db.DB.Query("SELECT order, price FROM orders WHERE description LIKE $1 AND status NOT IN ('INVALID', 'PROCESSED')", fmt.Sprintf("%%%s%%", match))
+	rows, err := db.DB.Query("SELECT order_id, (g).price FROM orders, UNNEST(goods) AS g WHERE (g).description LIKE $1 AND status NOT IN ('INVALID', 'PROCESSED')", fmt.Sprintf("%%%s%%", match))
 	if err != nil {
 		return []models.ParseMatch{}, fmt.Errorf("%s error executing query:%w", op, err)
 	}
@@ -279,5 +290,28 @@ func (db *PostgresDB) ParseMatch(match string) ([]models.ParseMatch, error) {
 			Price: price,
 		})
 	}
-	return []models.ParseMatch{}, nil
+	return parseMatches, nil
+}
+
+// GetUnprocessedOrders returns all orders that are not yet processed
+func (db *PostgresDB) GetUnprocessedOrders() ([]int64, error) {
+	op := "path: internal/accrual/storage/GetUnprocessedOrders"
+	var orderIDs []int64
+
+	rows, err := db.DB.Query("SELECT order_id FROM orders WHERE status NOT IN ('INVALID', 'PROCESSED')")
+	if err != nil {
+		return orderIDs, fmt.Errorf("%s error executing query:%w", op, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var orderID int64
+		err = rows.Scan(&orderID)
+		if err != nil {
+			return orderIDs, fmt.Errorf("%s error scanning row:%w", op, err)
+		}
+		orderIDs = append(orderIDs, orderID)
+	}
+
+	return orderIDs, nil
 }

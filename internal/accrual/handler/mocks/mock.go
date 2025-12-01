@@ -5,6 +5,7 @@
 package mock_handler
 
 import (
+	context "context"
 	models "go-musthave-diploma-tpl/internal/accrual/models"
 	reflect "reflect"
 
@@ -35,17 +36,17 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 }
 
 // CreateProductReward mocks base method.
-func (m *MockService) CreateProductReward(match string, reward float64, rewardType string) error {
+func (m *MockService) CreateProductReward(ctx context.Context, match string, reward float64, rewardType string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateProductReward", match, reward, rewardType)
+	ret := m.ctrl.Call(m, "CreateProductReward", ctx, match, reward, rewardType)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateProductReward indicates an expected call of CreateProductReward.
-func (mr *MockServiceMockRecorder) CreateProductReward(match, reward, rewardType interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder) CreateProductReward(ctx, match, reward, rewardType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProductReward", reflect.TypeOf((*MockService)(nil).CreateProductReward), match, reward, rewardType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProductReward", reflect.TypeOf((*MockService)(nil).CreateProductReward), ctx, match, reward, rewardType)
 }
 
 // GetAccrualInfo mocks base method.
@@ -66,16 +67,16 @@ func (mr *MockServiceMockRecorder) GetAccrualInfo(order interface{}) *gomock.Cal
 }
 
 // RegisterNewOrder mocks base method.
-func (m *MockService) RegisterNewOrder(order models.Order) (bool, error) {
+func (m *MockService) RegisterNewOrder(ctx context.Context, order models.Order) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterNewOrder", order)
+	ret := m.ctrl.Call(m, "RegisterNewOrder", ctx, order)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RegisterNewOrder indicates an expected call of RegisterNewOrder.
-func (mr *MockServiceMockRecorder) RegisterNewOrder(order interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder) RegisterNewOrder(ctx, order interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterNewOrder", reflect.TypeOf((*MockService)(nil).RegisterNewOrder), order)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterNewOrder", reflect.TypeOf((*MockService)(nil).RegisterNewOrder), ctx, order)
 }

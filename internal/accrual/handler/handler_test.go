@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	mock_handler "go-musthave-diploma-tpl/internal/accrual/handler/mocks"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestHandler_CreateProductReward(t *testing.T) {
@@ -31,14 +33,14 @@ func TestHandler_CreateProductReward(t *testing.T) {
 	}{
 		{
 			name:      "Ok",
-			inputBody: `{"match":"12345","reward":10.5,"reward_type":"percent"}`,
+			inputBody: `{"match":"12345","reward":10.5,"reward_type":"%"}`,
 			inputArgs: args{
 				match:      "12345",
 				reward:     10.5,
-				rewardType: "percent",
+				rewardType: "%",
 			},
 			mockBehavior: func(r *mock_handler.MockService, args args) {
-				r.EXPECT().CreateProductReward(args.match, args.reward, args.rewardType).Return(nil)
+				r.EXPECT().CreateProductReward(context.Background(), args.match, args.reward, args.rewardType).Return(nil)
 			},
 			expectedStatusCode:   200,
 			expectedResponseBody: "",
@@ -53,14 +55,14 @@ func TestHandler_CreateProductReward(t *testing.T) {
 		},
 		{
 			name:      "Service error",
-			inputBody: `{"match":"12345","reward":10.5,"reward_type":"percent"}`,
+			inputBody: `{"match":"12345","reward":10.5,"reward_type":"%"}`,
 			inputArgs: args{
 				match:      "12345",
 				reward:     10.5,
-				rewardType: "percent",
+				rewardType: "%",
 			},
 			mockBehavior: func(r *mock_handler.MockService, args args) {
-				r.EXPECT().CreateProductReward(args.match, args.reward, args.rewardType).Return(errors.New("service error"))
+				r.EXPECT().CreateProductReward(context.Background(), args.match, args.reward, args.rewardType).Return(errors.New("service error"))
 			},
 			expectedStatusCode:   500,
 			expectedResponseBody: "",
@@ -80,10 +82,11 @@ func TestHandler_CreateProductReward(t *testing.T) {
 
 			// Create Request
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest("POST", "/api/products", bytes.NewBufferString(tt.inputBody))
+			req := httptest.NewRequest("POST", "/api/goods", bytes.NewBufferString(tt.inputBody))
 
 			// Make Request
-			handler.CreateProductReward()(w, req)
+			logger := zap.NewNop().Sugar()
+			handler.CreateProductReward(context.Background(), logger)(w, req)
 
 			// Assert
 			assert.Equal(t, tt.expectedStatusCode, w.Code)
@@ -108,10 +111,10 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 	}{
 		{
 			name:      "Ok",
-			inputBody: `{"order":12345,"goods":[{"description":"product1","price":100.5}]}`,
+			inputBody: `{"order":"12345","goods":[{"description":"product1","price":100.5}]}`,
 			inputArgs: args{
 				order: models.Order{
-					Order: 12345,
+					Order: "12345",
 					Goods: []models.Goods{
 						{
 							Description: "product1",
@@ -121,17 +124,17 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 				},
 			},
 			mockBehavior: func(r *mock_handler.MockService, args args) {
-				r.EXPECT().RegisterNewOrder(args.order).Return(false, nil)
+				r.EXPECT().RegisterNewOrder(context.Background(), args.order).Return(false, nil)
 			},
 			expectedStatusCode:   200,
 			expectedResponseBody: "",
 		},
 		{
 			name:      "Order already exists",
-			inputBody: `{"order":12345,"goods":[{"description":"product1","price":100.5}]}`,
+			inputBody: `{"order":"12345","goods":[{"description":"product1","price":100.5}]}`,
 			inputArgs: args{
 				order: models.Order{
-					Order: 12345,
+					Order: "12345",
 					Goods: []models.Goods{
 						{
 							Description: "product1",
@@ -141,7 +144,7 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 				},
 			},
 			mockBehavior: func(r *mock_handler.MockService, args args) {
-				r.EXPECT().RegisterNewOrder(args.order).Return(true, nil)
+				r.EXPECT().RegisterNewOrder(context.Background(), args.order).Return(true, nil)
 			},
 			expectedStatusCode:   409,
 			expectedResponseBody: "",
@@ -156,10 +159,10 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 		},
 		{
 			name:      "Service error",
-			inputBody: `{"order":12345,"goods":[{"description":"product1","price":100.5}]}`,
+			inputBody: `{"order":"12345","goods":[{"description":"product1","price":100.5}]}`,
 			inputArgs: args{
 				order: models.Order{
-					Order: 12345,
+					Order: "12345",
 					Goods: []models.Goods{
 						{
 							Description: "product1",
@@ -169,7 +172,7 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 				},
 			},
 			mockBehavior: func(r *mock_handler.MockService, args args) {
-				r.EXPECT().RegisterNewOrder(args.order).Return(false, errors.New("service error"))
+				r.EXPECT().RegisterNewOrder(context.Background(), args.order).Return(false, errors.New("service error"))
 			},
 			expectedStatusCode:   500,
 			expectedResponseBody: "",
@@ -192,7 +195,8 @@ func TestHandler_RegisterNewOrder(t *testing.T) {
 			req := httptest.NewRequest("POST", "/api/orders", bytes.NewBufferString(tt.inputBody))
 
 			// Make Request
-			handler.RegisterNewOrder()(w, req)
+			logger := zap.NewNop().Sugar()
+			handler.RegisterNewOrder(context.Background(), logger)(w, req)
 
 			// Assert
 			assert.Equal(t, tt.expectedStatusCode, w.Code)
@@ -224,7 +228,7 @@ func TestHandler_GetAccrualInfo(t *testing.T) {
 			inputArgs: args{
 				order: 12345,
 			},
-			status:  models.PROCESSED,
+			status:  models.Processed,
 			accrual: 100.5,
 			exist:   true,
 			mockBehavior: func(r *mock_handler.MockService, args args, status string, accrual float64, exist bool) {
@@ -245,7 +249,7 @@ func TestHandler_GetAccrualInfo(t *testing.T) {
 			mockBehavior: func(r *mock_handler.MockService, args args, status string, accrual float64, exist bool) {
 				r.EXPECT().GetAccrualInfo(args.order).Return(status, accrual, exist, nil)
 			},
-			expectedStatusCode:   404,
+			expectedStatusCode:   204,
 			expectedResponseBody: "",
 		},
 		{
@@ -283,10 +287,11 @@ func TestHandler_GetAccrualInfo(t *testing.T) {
 
 			// Create Request
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", "/api/orders/accrual?number="+tt.orderNumber, nil)
+			req := httptest.NewRequest("GET", "/api/orders/"+tt.orderNumber, nil)
 
 			// Make Request
-			handler.GetAccrualInfo()(w, req)
+			logger := zap.NewNop().Sugar()
+			handler.GetAccrualInfo(logger)(w, req)
 
 			// Assert
 			assert.Equal(t, tt.expectedStatusCode, w.Code)

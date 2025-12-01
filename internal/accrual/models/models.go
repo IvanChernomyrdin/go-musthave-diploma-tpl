@@ -7,7 +7,7 @@ type ProductReward struct {
 }
 
 type Order struct {
-	Order int64   `json:"order"`
+	Order string  `json:"order"`
 	Goods []Goods `json:"goods"`
 }
 
