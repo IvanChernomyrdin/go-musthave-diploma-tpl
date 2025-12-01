@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"go-musthave-diploma-tpl/internal/gophermart/models"
+	handler "go-musthave-diploma-tpl/internal/gophermart/handler"
 	serviceTest "go-musthave-diploma-tpl/internal/gophermart/service"
 	mocks "go-musthave-diploma-tpl/internal/gophermart/service/mocks"
 
@@ -17,7 +17,7 @@ func TestGofemartService_CreateOrder_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	orderNumber := "12345678903"
@@ -36,7 +36,7 @@ func TestGofemartService_CreateOrder_InvalidUserID(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name   string
@@ -51,7 +51,7 @@ func TestGofemartService_CreateOrder_InvalidUserID(t *testing.T) {
 			err := service.CreateOrder(tt.userID, "12345678903")
 
 			assert.Error(t, err)
-			assert.Equal(t, "invalid user ID", err.Error())
+			assert.Equal(t, handler.ErrInvalidUserID.Error(), err.Error())
 		})
 	}
 }
@@ -61,14 +61,14 @@ func TestGofemartService_CreateOrder_EmptyOrderNumber(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 
 	err := service.CreateOrder(userID, "")
 
 	assert.Error(t, err)
-	assert.Equal(t, "order number is required", err.Error())
+	assert.Equal(t, handler.ErrOrderNumberRequired.Error(), err.Error())
 }
 
 func TestGofemartService_CreateOrder_DuplicateOrder(t *testing.T) {
@@ -76,19 +76,19 @@ func TestGofemartService_CreateOrder_DuplicateOrder(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	orderNumber := "12345678903"
 
 	mockRepo.EXPECT().
 		CreateOrder(userID, orderNumber).
-		Return(models.ErrDuplicateOrder)
+		Return(handler.ErrDuplicateOrder)
 
 	err := service.CreateOrder(userID, orderNumber)
 
 	assert.Error(t, err)
-	assert.Equal(t, models.ErrDuplicateOrder, err)
+	assert.Equal(t, handler.ErrDuplicateOrder, err)
 }
 
 func TestGofemartService_CreateOrder_OtherUserOrder(t *testing.T) {
@@ -96,19 +96,19 @@ func TestGofemartService_CreateOrder_OtherUserOrder(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	orderNumber := "12345678903"
 
 	mockRepo.EXPECT().
 		CreateOrder(userID, orderNumber).
-		Return(models.ErrOtherUserOrder)
+		Return(handler.ErrOtherUserOrder)
 
 	err := service.CreateOrder(userID, orderNumber)
 
 	assert.Error(t, err)
-	assert.Equal(t, models.ErrOtherUserOrder, err)
+	assert.Equal(t, handler.ErrOtherUserOrder, err)
 }
 
 func TestGofemartService_CreateOrder_DatabaseError(t *testing.T) {
@@ -116,7 +116,7 @@ func TestGofemartService_CreateOrder_DatabaseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := mocks.NewMockGofemartRepo(ctrl)
-	service := serviceTest.NewGofemartService(mockRepo)
+	service := serviceTest.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	userID := 1
 	orderNumber := "12345678903"

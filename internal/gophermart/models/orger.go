@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"time"
 )
 
@@ -20,9 +19,4 @@ const (
 	OrderStatusProcessing = "PROCESSING"
 	OrderStatusInvalid    = "INVALID"
 	OrderStatusProcessed  = "PROCESSED"
-)
-
-var (
-	ErrDuplicateOrder = errors.New("номер уже был загружен этим пользователем")
-	ErrOtherUserOrder = errors.New("номер загружен другим пользователем")
 )

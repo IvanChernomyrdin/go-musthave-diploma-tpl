@@ -14,7 +14,9 @@ import (
 
 // Вспомогательная функция для создания PostgresStorage с mock DB
 func newTestStorage(db *sql.DB) *postgres.PostgresStorage {
-	return postgres.NewWithDB(db)
+	storage := postgres.New()
+	storage.DB = db
+	return storage
 }
 
 // удачное создание
@@ -31,18 +33,18 @@ func TestPostgresStorage_CreateUser_Success(t *testing.T) {
 	expectedHash := postgres.HashPassword("password123")
 	createdAt := time.Now()
 
-	// Mock: проверяем что пользователь не существует
+	// проверяем что пользователь не существует
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, login, password_hash, created_at FROM users WHERE login = $1`)).
 		WithArgs("newuser").
 		WillReturnError(sql.ErrNoRows) // Пользователь не существует
 
-	// Mock: ожидаем успешное создание пользователя
+	// ожидаем успешное создание пользователя
 	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO users (login, password_hash) VALUES ($1, $2) RETURNING id, login, password_hash, created_at`)).
 		WithArgs("newuser", expectedHash).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "login", "password_hash", "created_at"}).
 			AddRow(1, "newuser", expectedHash, createdAt))
 
-	// Act - выполняем тестируемый метод
+	// выполняем тестируемый метод
 	user, err := storage.CreateUser("newuser", "password123")
 
 	// сравниваем результаты ожиданий с реальными

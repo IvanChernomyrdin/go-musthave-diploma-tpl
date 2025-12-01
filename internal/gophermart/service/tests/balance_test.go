@@ -15,7 +15,7 @@ func TestGofemartService_GetBalance(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := serviceMocks.NewMockGofemartRepo(ctrl)
-	svc := service.NewGofemartService(mockRepo)
+	svc := service.NewGofemartService(mockRepo, "http://localhost:8081")
 
 	tests := []struct {
 		name           string
@@ -25,7 +25,7 @@ func TestGofemartService_GetBalance(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name:   "Успешное получение баланса",
+			name:   "Successful balance receipt",
 			userID: 1,
 			setupMock: func() {
 				mockRepo.EXPECT().GetBalance(1).Return(models.Balance{
@@ -40,7 +40,7 @@ func TestGofemartService_GetBalance(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:   "Неверный userID",
+			name:   "Wrong userID",
 			userID: 0,
 			setupMock: func() {
 				// Не должно быть вызова к репозиторию
@@ -49,7 +49,7 @@ func TestGofemartService_GetBalance(t *testing.T) {
 			expectError:    true,
 		},
 		{
-			name:   "Ошибка репозитория",
+			name:   "Repository error",
 			userID: 2,
 			setupMock: func() {
 				mockRepo.EXPECT().GetBalance(2).Return(models.Balance{}, assert.AnError)
@@ -58,7 +58,7 @@ func TestGofemartService_GetBalance(t *testing.T) {
 			expectError:    true,
 		},
 		{
-			name:   "Баланс пустой",
+			name:   "Empty balance",
 			userID: 3,
 			setupMock: func() {
 				mockRepo.EXPECT().GetBalance(3).Return(models.Balance{
