@@ -4,7 +4,7 @@ CREATE TYPE goods AS (
 );
 
 
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS orders_accrual (
     id SERIAL PRIMARY KEY,
     order_id BIGINT NOT NULL UNIQUE,
     goods goods[],

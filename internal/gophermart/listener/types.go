@@ -12,7 +12,7 @@ type Job struct {
 }
 
 type AccrualResponse struct {
-	Order   string  `json:"order"`
+	Order   int64   `json:"order"`
 	Status  string  `json:"status"`
 	Accrual float64 `json:"accrual,omitempty"`
 }

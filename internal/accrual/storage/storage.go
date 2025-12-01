@@ -30,7 +30,9 @@ func InitPostgresDB(databaseDSN string) (*PostgresDB, error) {
 		return nil, fmt.Errorf("проверка подключения к БД не удалась: %v", err)
 	}
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{
+		MigrationsTable: "accrual_schema_migrations",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("ошибка создания драйвера миграций: %v", err)
 	}
@@ -130,7 +132,7 @@ func (db *PostgresDB) RegisterNewOrder(ctx context.Context, order int64, goods [
 	goodsArrayStr := "{" + strings.Join(goodsValues, ",") + "}"
 
 	query := `
-        INSERT INTO orders (order_id, goods, status)
+        INSERT INTO orders_accrual (order_id, goods, status)
         VALUES ($1, $2::goods[], $3)
     `
 
@@ -152,7 +154,7 @@ func (db *PostgresDB) CheckOrderExists(order int64) (bool, error) {
 	var exists bool
 	err := db.DB.QueryRow(`
 		SELECT EXISTS (
-			SELECT * FROM orders
+			SELECT * FROM orders_accrual
 			WHERE order_id = $1
 		)
 	`, order).Scan(&exists)
@@ -178,7 +180,7 @@ func (db *PostgresDB) GetAccrualInfo(order int64) (string, float64, error) {
 	var accrual sql.NullFloat64
 	var status string
 	err = tx.QueryRow(`
-		SELECT accrual, status FROM orders
+		SELECT accrual, status FROM orders_accrual
 		WHERE order_id = $1
 		`, order).Scan(&accrual, &status)
 	if err != nil {
@@ -204,7 +206,7 @@ func (db *PostgresDB) UpdateAccrualInfo(ctx context.Context, order int64, accrua
 	}()
 
 	_, err = tx.ExecContext(ctx, `
-		UPDATE orders SET accrual = $1, status = $2
+		UPDATE orders_accrual SET accrual = $1, status = $2
 		WHERE order_id = $3
 	`, accrual, status, order)
 	if err != nil {
@@ -232,7 +234,7 @@ func (db *PostgresDB) UpdateStatus(ctx context.Context, status string, order int
 	}()
 
 	_, err = tx.ExecContext(ctx, `
-		UPDATE orders SET status = $1
+		UPDATE orders_accrual SET status = $1
 		WHERE order_id = $2
 	`, status, order)
 	if err != nil {
@@ -277,7 +279,7 @@ func (db *PostgresDB) GetProductsInfo() ([]models.ProductReward, error) {
 
 func (db *PostgresDB) ParseMatch(match string) ([]models.ParseMatch, error) {
 	op := "path: internal/accrual/storage/ParseMatch"
-	rows, err := db.DB.Query("SELECT order_id, (g).price FROM orders, UNNEST(goods) AS g WHERE (g).description LIKE $1 AND status NOT IN ('INVALID', 'PROCESSED')", fmt.Sprintf("%%%s%%", match))
+	rows, err := db.DB.Query("SELECT order_id, (g).price FROM orders_accrual, UNNEST(goods) AS g WHERE (g).description LIKE $1 AND status NOT IN ('INVALID', 'PROCESSED')", fmt.Sprintf("%%%s%%", match))
 	if err != nil {
 		return []models.ParseMatch{}, fmt.Errorf("%s error executing query:%w", op, err)
 	}
@@ -306,7 +308,7 @@ func (db *PostgresDB) GetUnprocessedOrders() ([]int64, error) {
 	op := "path: internal/accrual/storage/GetUnprocessedOrders"
 	var orderIDs []int64
 
-	rows, err := db.DB.Query("SELECT order_id FROM orders WHERE status NOT IN ('INVALID', 'PROCESSED')")
+	rows, err := db.DB.Query("SELECT order_id FROM orders_accrual WHERE status NOT IN ('INVALID', 'PROCESSED')")
 	if err != nil {
 		return orderIDs, fmt.Errorf("%s error executing query:%w", op, err)
 	}

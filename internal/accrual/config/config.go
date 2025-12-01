@@ -6,13 +6,7 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-var (
-	runAddress      string
-	databaseURL     string
-	maxRequests     int
-	timeout         int
-	pollingInterval int
-)
+// internal/accrual/config/config.go
 
 type Config struct {
 	RunAddress      string `env:"RUN_ADDRESS"`
@@ -22,21 +16,27 @@ type Config struct {
 	PollingInterval int    `env:"POLLING_INTERVAL"`
 }
 
+var (
+	runAddress      string
+	databaseURL     string
+	maxRequests     int
+	timeout         int
+	pollingInterval int
+)
+
 func Load() *Config {
 	cfg := &Config{}
 
-	flag.StringVar(&runAddress, "a", "localhost:8082", "адрес и порт запуска сервиса")
-	flag.StringVar(&databaseURL, "d", "postgres://postgres:12345678@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
+	flag.StringVar(&runAddress, "a", "localhost:8081", "адрес и порт запуска сервиса")
+	flag.StringVar(&databaseURL, "d", "postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable", "адрес подключения к базе данных")
 	flag.IntVar(&maxRequests, "m", 100, "максимальное количество запросов")
 	flag.IntVar(&timeout, "t", 10, "таймаут в секундах")
 	flag.IntVar(&pollingInterval, "i", 10, "интервал повтора запросов")
-	flag.Parse()
-	cfg.applyEnv()
-	return cfg
-}
 
-func (cfg *Config) applyEnv() {
-	env.Parse(&cfg)
+	flag.Parse()
+
+	_ = env.Parse(cfg) // важно: cfg, а не &cfg
+
 	if cfg.RunAddress == "" {
 		cfg.RunAddress = runAddress
 	}
@@ -44,7 +44,6 @@ func (cfg *Config) applyEnv() {
 		cfg.DatabaseURL = databaseURL
 	}
 	if cfg.MaxRequests == 0 {
-
 		cfg.MaxRequests = maxRequests
 	}
 	if cfg.Timeout == 0 {
@@ -54,4 +53,5 @@ func (cfg *Config) applyEnv() {
 		cfg.PollingInterval = pollingInterval
 	}
 
+	return cfg
 }
