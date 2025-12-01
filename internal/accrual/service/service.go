@@ -54,6 +54,9 @@ func (s *Service) RegisterNewOrder(ctx context.Context, order models.Order) (boo
 	if err != nil {
 		return exist, err
 	}
+	if exist {
+		return exist, nil
+	}
 
 	if err := s.repo.RegisterNewOrder(ctx, number, order.Goods, models.Registered); err != nil {
 		return exist, err

@@ -120,9 +120,9 @@ func (db *PostgresDB) RegisterNewOrder(ctx context.Context, order int64, goods [
 	// Build the goods array using proper PostgreSQL composite type syntax
 	goodsValues := make([]string, len(goods))
 	for i, good := range goods {
-		// Escape single quotes by replacing each ' with ''
+
 		desc := strings.ReplaceAll(good.Description, "'", "''")
-		// For composite types in arrays, we need to use proper escaping
+
 		goodsValues[i] = fmt.Sprintf(`"(%s,%f)"`, desc, good.Price)
 	}
 
