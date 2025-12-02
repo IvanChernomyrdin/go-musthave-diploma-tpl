@@ -22,4 +22,4 @@ git remote add -m master template https://github.com/yandex-praktikum/go-musthav
 git fetch template && git checkout template/master .github
 ```
 
-Затем добавьте полученные изменения в свой репозиторий.
+Затем добавьте полученные изменения в свой репозиторий
